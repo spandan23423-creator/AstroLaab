@@ -96,8 +96,9 @@ export class Outpost {
     const P = id => this.load(id)?.powered;
     const breathO2 = REF.o2PerPersonKgH * this.crew * h, breathCO2 = REF.co2PerPersonKgH * this.crew * h;
     this.o2Kg -= breathO2; this.co2Kg += breathCO2;
-    if (P('o2gen')) { // electrolysis makes up to 0.16 kg/h, aiming at 21%; stops when there is no water
-      const want = Math.max(0, kgFromPct(REF.o2TargetPct, 32) - this.o2Kg), make = Math.min(want, 0.16 * h, this.waterL / REF.waterPerO2Kg);
+    if (P('o2gen')) { // electrolysis replaces what the crew breathes (up to 0.16 kg/h, never above 21%), so oxygen holds steady
+      // but never climbs: on the Moon there is no outside source, and the readout must not go up. Stops when there is no water.
+      const want = Math.max(0, kgFromPct(REF.o2TargetPct, 32) - this.o2Kg), make = Math.min(want, breathO2, 0.16 * h, this.waterL / REF.waterPerO2Kg);
       this.o2Kg += make; this.waterL -= make * REF.waterPerO2Kg;
     }
     if (P('scrubber')) this.co2Kg = Math.max(kgFromPct(0.04, 44), this.co2Kg - 0.25 * h);

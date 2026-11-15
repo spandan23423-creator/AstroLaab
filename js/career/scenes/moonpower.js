@@ -69,6 +69,13 @@ export default {
     const hitBox = (obj, w, hh, d, y) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, hh, d), new THREE.MeshBasicMaterial({ visible: false })); m.position.y = y; m.userData.hitbox = true; obj.add(m); return m; };
     hitBox(radio, 0.5, 1.8, 0.4, 0.9); hitBox(lm, 4.2, 5.2, 4.2, 2.6); hitBox(term, 0.7, 1.5, 0.5, 0.75);
     const field = makeSign('SOLAR FIELD', 'Panels face the Sun, low in the east', 2.2, '#7a5a10'); field.position.set(10.2, 1.6, -9.0); scene.add(field);
+    // --- outpost boundary: a lit ring of marker posts and a ground line, visible from every angle and in the crater-rim
+    // shadow (unlit materials), and enforced all mission long (you can't walk past it)
+    const BND = { x: 0, z: -2, r: 30 };
+    const bndMat = new THREE.MeshBasicMaterial({ color: 0xffc857 }), bndLine = new THREE.MeshBasicMaterial({ color: 0xffc857, transparent: true, opacity: 0.55, depthWrite: false });
+    const ringLine = new THREE.Mesh(new THREE.RingGeometry(BND.r - 0.08, BND.r + 0.08, 160), bndLine); ringLine.rotation.x = -Math.PI / 2; ringLine.position.set(BND.x, 0.02, BND.z); ringLine.frustumCulled = false; scene.add(ringLine);
+    for (let i = 0; i < 48; i++) { const a = i / 48 * Math.PI * 2, post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.9, 6), bndMat); post.position.set(BND.x + Math.cos(a) * BND.r, 0.45, BND.z + Math.sin(a) * BND.r); scene.add(post); const cap = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), MAT.glow(0xffc857, 2)); cap.position.copy(post.position).setY(0.95); scene.add(cap); }
+    let bndWarn = 0;
     // --- simulation
     const sim = new Outpost({ crew: 4, loads: LOADS, panels: PANELS.map((_, i) => ({ id: 'P' + (i + 1), peakKW: 2.5, deployed: state.deployed[i], connected: false })), battery: { capKWh: 30, socPct: 60 }, sunlit: true, ambientC: -30 });
     if (state.settings) for (const [id, on, p] of state.settings) { const l = sim.load(id); if (l) { l.on = on; l.priority = p; } }
@@ -147,6 +154,8 @@ export default {
       onEnter: () => { hud.flash(certified ? '🎖️ Trained in: Power Lab (Power Systems L1)' : 'No Power Systems certification yet', certified ? 'good' : 'bad', 4000); if (!ctx.isDone('brief')) setTimeout(brief, 600); else T.start(); },
       update(dt, blocked) {
         T.update(dt, blocked); sky.update?.(dt);
+        { const p = player.pos, dx = p.x - BND.x, dz = p.z - BND.z, d = Math.hypot(dx, dz), lim = BND.r - 0.35; bndWarn -= dt;
+          if (d > lim) { p.x = BND.x + dx / d * lim; p.z = BND.z + dz / d * lim; if (bndWarn <= 0) { bndWarn = 4; hud.flash('Outpost boundary: stay inside the yellow markers. Beyond them the ground is unsurveyed.', 'bad', 3000); } } }
         // panels: unfold animation and aim
         panels.forEach((p, i) => { const target = state.deployed[i] ? 1 : 0; p.userData.k += (target - p.userData.k) * Math.min(1, dt * 2.5); setPanelDeploy(p, p.userData.k); const hy = p.userData.head.rotation; hy.y += wrap(state.yaw[i] - hy.y) * Math.min(1, dt * 4); sim.panels[i].angleErr = Math.acos(Math.max(-1, Math.min(1, facing(i)))); });
         // shadow countdown and test

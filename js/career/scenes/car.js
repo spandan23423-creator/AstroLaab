@@ -2,7 +2,7 @@
 // The car stays still at the origin; the road, ground and scenery scroll past.
 import * as THREE from '../../../vendor/three.module.js';
 import { TEX, MAT } from '../models/materials.js';
-import { makeCar, makeRoadHouse, makeTree, makeLamppost, makePowerPole, makeRoadSign, makeFence, makeFlag, waveFlag, makeTrainingCentre, makeDisplayRocket } from '../models/outdoor.js';
+import { makeCar, makeRoadHouse, makeTree, makeLamppost, makePowerPole, makeRoadSign, makeFence, makeFlag, waveFlag, makeTrainingCentre, makeDisplayRocket, makeDaySky } from '../models/outdoor.js';
 import { makePerson, animatePerson } from '../models/humans.js';
 import { LOOKS } from '../data/people.js';
 import { setAmbienceRate } from '../engine/audio.js';
@@ -21,7 +21,7 @@ export default {
 
   async build(ctx) {
     const { scene, world, player, hud, sfx, state } = ctx;
-    scene.background = new THREE.Color(0xa9cdee); scene.fog = new THREE.Fog(0xbcd7ef, 70, 360);
+    scene.background = new THREE.Color(0x62a0e0); scene.fog = new THREE.Fog(0xcfe4f6, 90, 420); scene.add(makeDaySky()); // blue sky with clouds (fog colour matches its horizon)
     world.camera.far = 600; world.camera.updateProjectionMatrix();
     scene.add(new THREE.HemisphereLight(0xdfefff, 0x6a7a55, 1.1));
     const sun = world.shadowLight(new THREE.DirectionalLight(0xfff1d6, 2.2)); sun.position.set(30, 40, 10); sun.target.position.set(0, 0, 0);
@@ -58,7 +58,8 @@ export default {
           else if (r < 0.95) place(makeTree((s / 16) | 0, 0.9 + rnd() * 0.4), s, ROAD_X + side * (8 + rnd() * 3));
         } else if (zone === 'highway') {
           if (side === -1 && (s % 64) < 16) place(makePowerPole(), s, ROAD_X - 9);
-          if (r < 0.35) place(makeTree((s / 16) | 0, 1 + rnd() * 0.6), s, ROAD_X + side * (10 + rnd() * 25));
+          if (r < 0.65) place(makeTree((s / 16) | 0, 1 + rnd() * 0.6), s, ROAD_X + side * (10 + rnd() * 25)); // fuller roadside: the highway stretch looked empty
+          if (rnd() < 0.4) place(makeTree((s / 16) | 0 + 7, 1.3 + rnd() * 0.8), s + 8, ROAD_X + side * (40 + rnd() * 60));
         } else {
           if (side === 1 && s < STOP + 10) { const f = place(makeFence(16), s, ROAD_X + 7.5, Math.PI / 2); void f; }
           else if (r < 0.4) place(makeTree((s / 16) | 0, 1.1), s, ROAD_X - 9 - rnd() * 10);
@@ -71,6 +72,10 @@ export default {
     const centre = place(makeTrainingCentre(), STOP + 55, 22, -Math.PI / 2 + 0.25);
     const rocket = place(makeDisplayRocket(1), STOP + 18, 15);
     const flags = ['emblem', 'class', 'emblem'].map((k, i) => place(makeFlag(k), STOP + 25 + i * 5, 10));
+    // distant hills all round the horizon (they stay put: at this distance there is almost no parallax), so the edges of the
+    // world are never an empty flat line
+    { const hm = MAT.std({ color: 0x6f8a5a, roughness: 1 }); let hs = 99; const hr = () => (hs = (hs * 16807) % 2147483647) / 2147483647;
+      for (let i = 0; i < 26; i++) { const a = i / 26 * Math.PI * 2 + hr() * 0.2, d = 330 + hr() * 60, hgt = 18 + hr() * 30, w = 60 + hr() * 70; const m = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2), hm); m.scale.set(w, hgt, w * 0.7); m.position.set(Math.sin(a) * d, -1, Math.cos(a) * d); scene.add(m); } }
     // oncoming traffic
     const traffic = [0xb83a3a, 0xe6e6e6, 0x2f3a46, 0x6a8a4a].map(c => { const t = makeCar(c, { interior: false }); t.rotation.y = Math.PI; t.position.x = ROAD_X - 1.9; t.userData.s = 999999; scene.add(t); return t; });
     let tIdx = 0, tTimer = 4;
@@ -129,10 +134,10 @@ export default {
         // scroll the world
         const off = d;
         roadT.offset.y = (off / 10) % 1; grassT.offset.y = (off / 7.5) % 1;
-        for (const o of items) { const z = -(o.userData.s - off); o.position.z = z; o.visible = z < 30 && z > -380; }
+        for (const o of items) { const z = -(o.userData.s - off); o.position.z = z; o.visible = z < 30 && z > -440; } // appear only once fully inside the fog (no pop-in)
         for (const f of flags) if (f.visible) waveFlag(f, t);
         // traffic
-        tTimer -= k; if (tTimer <= 0 && d > 80 && d < STOP - 150) { tTimer = 5 + Math.random() * 8; const c = traffic[tIdx++ % traffic.length]; c.userData.z = -360; }
+        tTimer -= k; if (tTimer <= 0 && d > 80 && d < STOP - 150) { tTimer = 5 + Math.random() * 8; const c = traffic[tIdx++ % traffic.length]; c.userData.z = -440; }
         for (const c of traffic) if (c.userData.z != null) { c.userData.z += (v + 18) * k; c.position.z = c.userData.z; c.visible = c.userData.z < 40; if (c.userData.z > 40) c.userData.z = null; } else c.visible = false;
         // car motion: wheels, a little body sway, the steering wheel and Bug's hands
         car.userData.wheels.forEach(w => w.rotation.x -= v * k / 0.33);

@@ -25,8 +25,12 @@ export function infoScreen(title, lines = [], { accent = '#5ad8ff', w = 512, hgt
 export function makeScreen(wm, hm, drawFn, px = [512, 320]) {
   const s = screenTex(px[0], px[1], drawFn);
   const g = new THREE.Group();
-  box(wm + 0.08, hm + 0.08, 0.06, std(0x1a1d24, { roughness: 0.4 }), 0, 0, -0.03, g);
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(wm, hm), new THREE.MeshStandardMaterial({ map: s.tex, emissive: 0xffffff, emissiveMap: s.tex, emissiveIntensity: 0.85, roughness: 0.3 })); face.position.z = 0.002; g.add(face);
+  const bezel = std(0x1a1d24, { roughness: 0.4 });
+  box(wm + 0.08, hm + 0.08, 0.06, bezel, 0, 0, -0.03, g);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(wm, hm), new THREE.MeshStandardMaterial({ map: s.tex, emissive: 0xffffff, emissiveMap: s.tex, emissiveIntensity: 0.85, roughness: 0.3, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 })); face.position.z = 0.006; g.add(face);
+  // the border is a raised frame in front of the picture's edges (it used to be only the box behind it, so on big screens
+  // it flickered with the picture and looked like it was drawn behind it)
+  const fb = 0.04, fz = 0.012; box(wm + 0.08, fb, 0.016, bezel, 0, hm / 2 + 0.02, fz, g); box(wm + 0.08, fb, 0.016, bezel, 0, -hm / 2 - 0.02, fz, g); box(fb, hm + 0.08, 0.016, bezel, wm / 2 + 0.02, 0, fz, g); box(fb, hm + 0.08, 0.016, bezel, -wm / 2 - 0.02, 0, fz, g);
   g.userData.screen = s; g.userData.face = face; return g;
 }
 // Reception counter: an L of desk with a raised front and a glowing strip
@@ -84,8 +88,8 @@ export function makeEmblemPlaque(r = 1.1) {
 export function makeClipboard() { const g = new THREE.Group(); box(0.26, 0.01, 0.34, std(0x8a6240), 0, 0.005, 0, g); box(0.22, 0.004, 0.3, std(0xfbf8ef), 0, 0.012, 0.01, g); box(0.1, 0.012, 0.03, MAT.metal(0xc0c4c8), 0, 0.016, -0.15, g); const pen = cyl(0.006, 0.006, 0.15, std(0x0d2f6e), 0.16, 0.01, 0, g, 8); pen.rotation.x = Math.PI / 2; return g; }
 // A big hanging model satellite for the atrium
 export function makeSatelliteModel() {
-  const g = new THREE.Group(); box(0.8, 0.8, 1.2, std(0xd9b44a, { roughness: 0.3, metalness: 0.6 }), 0, 0, 0, g);
-  for (const sx of [-1, 1]) { const p = box(2.4, 0.03, 0.9, std(0x1f3f7a, { roughness: 0.2, metalness: 0.5 }), sx * 1.7, 0, 0, g); void p; cyl(0.02, 0.02, 0.5, MAT.metal(), sx * 0.6, 0, 0, g).rotation.z = Math.PI / 2; }
-  const dish = new THREE.Mesh(new THREE.SphereGeometry(0.5, 20, 10, 0, Math.PI * 2, 0, 1.0), std(0xf2f2f2, { side: THREE.DoubleSide })); dish.rotation.x = Math.PI / 2; dish.position.z = 0.9; g.add(dish);
+  const g = new THREE.Group(); box(0.8, 0.8, 1.2, std(0xd9b44a, { roughness: 0.45, metalness: 0.25 }), 0, 0, 0, g); // gold foil body (very metallic gold rendered almost black indoors, with nothing to reflect)
+  for (const sx of [-1, 1]) { const p = box(2.4, 0.04, 0.9, std(0x2a55a8, { roughness: 0.35, metalness: 0.2, emissive: 0x0a1a3a, emissiveIntensity: 0.4 }), sx * 1.7, 0, 0, g); box(2.44, 0.03, 0.04, MAT.metal(), sx * 1.7, 0, 0.45, g); box(2.44, 0.03, 0.04, MAT.metal(), sx * 1.7, 0, -0.45, g); void p; cyl(0.02, 0.02, 0.5, MAT.metal(), sx * 0.6, 0, 0, g).rotation.z = Math.PI / 2; } // solar wings with frames
+  const dish = new THREE.Mesh(new THREE.SphereGeometry(0.5, 20, 10, 0, Math.PI * 2, 0, 1.0), std(0xf2f2f2, { side: THREE.DoubleSide })); dish.rotation.x = -Math.PI / 2; dish.position.z = 1.1; g.add(dish); cyl(0.04, 0.04, 0.3, MAT.metal(), 0, 0, 0.75, g, 8).rotation.x = Math.PI / 2; // dish opens outwards, on a short boom (it used to cut into the body)
   return shadowAll(g);
 }

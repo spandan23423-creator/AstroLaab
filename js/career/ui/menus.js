@@ -75,6 +75,7 @@ export function openCredits() {
   openModal({ title: '✦ Credits', label: 'Credits', body: h('div', { class: 'cx-credits' },
     h('h1', { class: 'logo small' }, 'ASTRO', h('span', {}, 'LAB')),
     h('p', {}, 'An astronomy and astronaut-training game.'),
+    h('h3', {}, 'ASTRO LAB TEAM'), h('ol', { class: 'cx-roll-team small' }, TEAM.map(n => h('li', {}, n))),
     h('h3', {}, 'Game'), h('p', {}, 'Game concept and specification: the ASTRO LAB team. Design, code, models and sound built with Claude (Anthropic).'),
     h('h3', {}, 'Characters'), h('p', {}, 'Bug and Cat, your parents. Instructor Okafor, Training Bay 1. Director D. Reyes, Junior Astronaut Training Program.'),
     h('h3', {}, 'Technology'), h('p', {}, 'Three.js r169 (MIT licence). Music, sound effects and the remaining 3D models and textures are generated in code.'),
@@ -82,6 +83,27 @@ export function openCredits() {
     h('h3', {}, 'Moon map'), ...MOON_CREDITS.map(c => h('p', { class: 'tiny' }, `${c.name}: ${c.source}. ${c.licence}${c.note ? ' · ' + c.note : ''}.`)),
     h('h3', {}, 'Imported 3D models'), h('p', { class: 'tiny' }, 'People, the family car, helicopter, training-centre building, greenhouse, tent, alarm clock, notice board and crops come from the owner\'s downloaded model collection (see models/CREDITS.md). Their authors\' licences come with the downloads.'),
     h('p', { class: 'muted tiny' }, 'ASTRO LAB is a fan-made educational game. It is not affiliated with or endorsed by NASA. "NASA-style" insignia in the game are original designs.')) });
+}
+
+// ---------- End credits ----------
+// The team, exactly as given. Rolls slowly enough to read (about 26 s); Skip or Esc ends it and returns to the main menu.
+export const TEAM = ['Spandan Shrestha', 'Ankit Tandukar', 'Sparsha Kiran Shakta', 'Suprabha Thapa', 'Sandesh Maji', 'Samyam Shrestha'];
+export function showEndCredits(onDone = () => app?.toMenu?.()) {
+  document.querySelector('.cx-endcredits')?.remove();
+  const roll = h('div', { class: 'cx-roll' },
+    h('h1', { class: 'logo' }, 'ASTRO', h('span', {}, 'LAB')),
+    h('p', { class: 'cx-roll-lead' }, 'Congratulations, Junior Astronaut. Next stop: the Moon.'),
+    h('h2', {}, 'ASTRO LAB TEAM'),
+    h('ol', { class: 'cx-roll-team' }, TEAM.map(n => h('li', {}, n))),
+    h('p', { class: 'cx-roll-thanks' }, 'Thank you for playing.'));
+  let done = false;
+  const end = () => { if (done) return; done = true; removeEventListener('keydown', key, true); wrap.remove(); onDone(); };
+  const key = e => { if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); end(); } };
+  const wrap = h('div', { class: 'cx-endcredits', role: 'dialog', 'aria-label': 'End credits' }, roll,
+    h('div', { class: 'cx-roll-btns' }, h('button', { class: 'btn', onclick: end }, 'Skip ⏭'), h('button', { class: 'btn primary', onclick: end }, '☰ Main menu')));
+  document.body.append(wrap); addEventListener('keydown', key, true);
+  roll.addEventListener('animationend', () => setTimeout(end, 1500));
+  return { end };
 }
 
 // ---------- Quit ----------

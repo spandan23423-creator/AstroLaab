@@ -133,7 +133,7 @@ export default {
           line.geometry.setFromPoints([A.clone(), F.pos.clone().add(new THREE.Vector3(0, -0.5, 0))]); line.visible = !ctx.isDone('return');
         } else line.visible = false;
         if (!ctx.isDone('translate') && ctx.isDone('depress') && F.pos.distanceTo(new THREE.Vector3(12.4, 2.0, -3.0)) < 1.6) { if (state.anchor < ANCHORS.length - 1) { if (!this._aw) { this._aw = 1; hud.flash('Clip to the last anchor next to the antenna first.', 'bad'); } } else { ctx.done('translate'); hud.flash('At the work site. Unbolt the failed unit.', 'good'); } }
-        if (!blocked) hud.setReadout('Suit', [['O₂', `${Math.max(60, 100 - Math.floor(T.t / 12))}%`, 'good'], ['Suit pressure', state.seq >= 3 && !returning ? '4.3 psi' : 'cabin', ''], ['Speed', `${F.speed.toFixed(2)} m/s`, F.speed > F.bumpLimit ? 'bad' : ''], ['Tether', state.seq >= 5 ? `anchor ${state.anchor + 1}` : 'airlock', 'good']]);
+        if (!blocked) hud.setReadout('Suit', [['O₂', `${(state.o2 = Math.min(state.o2 ?? 100, Math.max(60, 100 - Math.floor(T.t / 12))))}%`, 'good'], ['Suit pressure', state.seq >= 3 && !returning ? '4.3 psi' : 'cabin', ''], ['Speed', `${F.speed.toFixed(2)} m/s`, F.speed > F.bumpLimit ? 'bad' : ''], ['Tether', state.seq >= 5 ? `anchor ${state.anchor + 1}` : 'airlock', 'good']]);
       }
     };
     function finish() {

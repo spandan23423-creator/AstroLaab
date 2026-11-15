@@ -339,3 +339,33 @@ export function makeLeanTo({ w = 2.2, d = 2.4, h = 1.8, color = 0xd96a2a } = {})
   swapModel(g, 'tent', { size: Math.max(w, d) * 1.05, by: 'length', rotY: Math.PI / 2 }, { after: hh => { hh.position.z = d / 2; } });
   return g;
 }
+
+// Daytime sky for Earth scenes (the drive, arrival, launch day): a blue gradient dome with soft clouds. It follows the
+// camera, ignores fog and never writes depth, so it sits behind everything. The Moon and space scenes keep their black sky.
+let daySkyTex = null;
+function daySkyTexture() {
+  if (daySkyTex) return daySkyTex;
+  const W = 1024, Hh = 512, c = document.createElement('canvas'); c.width = W; c.height = Hh; const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, Hh / 2);
+  g.addColorStop(0, '#2f6fc4'); g.addColorStop(0.55, '#62a0e0'); g.addColorStop(1, '#cfe4f6');
+  x.fillStyle = g; x.fillRect(0, 0, W, Hh / 2); x.fillStyle = '#cfe4f6'; x.fillRect(0, Hh / 2, W, Hh / 2);
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 34; i++) { // cumulus clusters: overlapping soft white puffs, flatter and smaller near the horizon
+    const cy = Hh * (0.12 + rnd() * 0.32), cx = rnd() * W, sc = 0.45 + (cy / (Hh / 2)) * 0.2 + rnd() * 0.5;
+    for (let k = 0; k < 9; k++) {
+      const px = cx + (rnd() - 0.5) * 90 * sc, py = cy + (rnd() - 0.5) * 18 * sc, r = (14 + rnd() * 26) * sc;
+      const rg = x.createRadialGradient(px, py, 0, px, py, r); rg.addColorStop(0, 'rgba(255,255,255,0.9)'); rg.addColorStop(0.6, 'rgba(250,252,255,0.55)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
+      x.fillStyle = rg; x.beginPath(); x.ellipse(px, py, r, r * 0.62, 0, 0, Math.PI * 2); x.fill();
+    }
+  }
+  for (let px = 0; px < 24; px++) x.drawImage(c, W - 24 + px, 0, 1, Hh, px, 0, 1, Hh); // soften the wrap seam
+  daySkyTex = new THREE.CanvasTexture(c); daySkyTex.colorSpace = THREE.SRGBColorSpace; daySkyTex.mapping = THREE.EquirectangularReflectionMapping;
+  return daySkyTex;
+}
+export function makeDaySky(radius = 450) {
+  const t = daySkyTexture().clone(); t.mapping = THREE.UVMapping; t.needsUpdate = true;
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(radius, 48, 24), new THREE.MeshBasicMaterial({ map: t, side: THREE.BackSide, fog: false, depthWrite: false }));
+  sky.renderOrder = -10; sky.frustumCulled = false; sky.name = 'day-sky';
+  sky.onBeforeRender = (r, s, cam) => { sky.position.copy(cam.position); if (sky.parent) sky.parent.worldToLocal(sky.position); sky.updateMatrixWorld(); };
+  return sky;
+}

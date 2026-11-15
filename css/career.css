@@ -286,3 +286,15 @@ body.touch:not(.force-kbm) .cx-meters { bottom: 170px; }
 .cx-checklist li:has(> b:first-child) { display: grid; grid-template-columns: minmax(110px, 38%) 1fr; gap: 10px; align-items: baseline; }
 .cx-checklist li b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 480px) { .cx-checklist li:has(> b:first-child) { grid-template-columns: 1fr; gap: 2px; } .cx-checklist li b { white-space: normal; } }
+/* End credits: a slow roll over a dark starfield, readable for about 26 s, with Skip and Main menu buttons */
+.cx-endcredits { position: fixed; inset: 0; z-index: 80; background: radial-gradient(ellipse at 50% 40%, #0b1430 0%, #03040c 70%); overflow: hidden; display: flex; justify-content: center; }
+.cx-roll { position: absolute; top: 100%; width: min(640px, 90vw); text-align: center; animation: cx-roll 26s linear forwards; }
+.cx-roll h1 { font-size: clamp(2.2rem, 7vw, 3.6rem); margin: 0 0 12px; }
+.cx-roll h2 { margin: 18vh 0 22px; letter-spacing: .25em; font-size: clamp(1.3rem, 4vw, 1.9rem); color: var(--cyan, #5ad8ff); }
+.cx-roll-lead { font-size: 1.15rem; opacity: .9; }
+.cx-roll-team { list-style: decimal; list-style-position: inside; padding: 0; margin: 0; display: grid; gap: 16px; font-size: clamp(1.15rem, 3.6vw, 1.6rem); }
+.cx-roll-team.small { gap: 4px; font-size: 1rem; text-align: left; }
+.cx-roll-thanks { margin-top: 22vh; opacity: .8; }
+.cx-roll-btns { position: absolute; right: 16px; bottom: 16px; display: flex; gap: 8px; }
+@keyframes cx-roll { from { transform: translateY(0); } to { transform: translateY(calc(-100% - 100vh)); } }
+body.reduced-motion .cx-roll { animation: none; top: 8vh; }

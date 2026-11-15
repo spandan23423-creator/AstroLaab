@@ -6,12 +6,13 @@ import * as THREE from '../../../vendor/three.module.js';
 import { MAT, TEX } from '../models/materials.js';
 import { makeSign } from '../models/props.js';
 import { std, box, cyl } from '../models/house.js';
-import { makeDisplayRocket } from '../models/outdoor.js';
+import { makeDisplayRocket, makeDaySky, makeTree, makeFence, makeLamppost } from '../models/outdoor.js';
 import { makeScreen, infoScreen } from '../models/centre.js';
 import { makePart, PART_ORDER, makeSuitStand } from '../models/suit.js';
 import { LOOKS } from '../data/people.js';
 import { makeUsable } from '../engine/interact.js';
 import { trainingRoom, instructor, finishExercise } from './kit.js';
+import { showEndCredits } from '../ui/menus.js';
 import { spaceBackdrop } from './space.js';
 import { readDoc } from '../ui/panels.js';
 import { career } from '../state/careerSave.js';
@@ -64,10 +65,22 @@ export default {
     const ds = makeSign('CREW VAN', 'To the launch pad', 1.2); ds.position.set(0, 2.7, 4.42); ds.rotation.y = Math.PI; scene.add(ds);
     makeUsable(door, { label: 'Door to the crew van', verb: 'Go through', range: 2.6, enabled: () => state.stage === 'room', use: () => { if (!ctx.isDone('suit')) { hud.flash('Finish your checks and suit up first.', 'bad'); return; } toVan(); } }); ix.add(door);
     // ---------- outside: road, pad, rocket ----------
-    const out = new THREE.Group(); out.visible = false; scene.add(out);
+    const out = new THREE.Group(); out.visible = false; scene.add(out); const daySky = makeDaySky(380); daySky.material.transparent = true; out.add(daySky); // blue sky with clouds over the pad (fades out as you climb into space)
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), std(0x7a8a5a, { map: TEX.grass?.([80, 80]) || null, roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.set(PAD.x, -0.02, 0); out.add(ground);
     const road = new THREE.Mesh(new THREE.PlaneGeometry(8, 300), std(0x3a3d42, { roughness: 0.9 })); road.rotation.x = -Math.PI / 2; road.position.set(PAD.x, 0, 90); out.add(road);
     const rocket = makeDisplayRocket(2.2); rocket.position.copy(PAD); out.add(rocket);
+    // the drive to the pad: trees, lamps and a security fence along the road, hangars and a ring of low hills on the horizon
+    // (before, the van crossed an empty green plane)
+    { let rs = 41; const r = () => (rs = (rs * 16807) % 2147483647) / 2147483647;
+      for (let z = 230; z > 0; z -= 9) for (const side of [-1, 1]) {
+        if (r() < 0.75) { const t = makeTree((z | 0) + side, 0.9 + r() * 0.6); t.position.set(PAD.x + side * (7 + r() * 14), 0, z + r() * 4); out.add(t); }
+        if (side === 1 && (z % 27) < 9) { const l = makeLamppost(); l.position.set(PAD.x + 4.6, 0, z); out.add(l); }
+      }
+      for (let z = 220; z > 20; z -= 10) { const f = makeFence(10); f.position.set(PAD.x - 5.2, 0, z); f.rotation.y = Math.PI / 2; out.add(f); }
+      const hang = std(0xd9dce2, { roughness: 0.7 }), door = std(0x5a6070);
+      for (const [x, z, w, d, h] of [[PAD.x - 60, 120, 40, 30, 18], [PAD.x + 55, 80, 30, 24, 14], [PAD.x - 45, 30, 26, 20, 12]]) { box(w, h, d, hang, x, h / 2, z, out); box(w * 0.5, h * 0.7, 0.2, door, x + (x < PAD.x ? w / 2 + 0.1 : -w / 2 - 0.1), h * 0.35, z, out).rotation.y = Math.PI / 2; }
+      const hm = std(0x6f8a5a, { roughness: 1 });
+      for (let i = 0; i < 22; i++) { const a = i / 22 * Math.PI * 2, d = 300 + r() * 50, m = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), hm); m.scale.set(50 + r() * 60, 12 + r() * 22, 40 + r() * 40); m.position.set(PAD.x + Math.sin(a) * d, -1, 90 + Math.cos(a) * d); out.add(m); } }
     const tower = new THREE.Group(); for (let y = 0; y < 54; y += 3) { box(3, 0.2, 3, MAT.metal(0xc84a2a), 0, y, 0, tower); for (const [x, z] of [[-1.4, -1.4], [1.4, -1.4], [-1.4, 1.4], [1.4, 1.4]]) box(0.2, 3, 0.2, MAT.metal(0xc84a2a), x, y + 1.5, z, tower); } tower.position.set(PAD.x + 7, 0, PAD.z); out.add(tower);
     // crew van: an open cabin you sit inside (the old one was a solid box around the camera, so its faces were culled and
     // you saw neither the van nor much else). Walls are double-sided, the windows are real gaps, and it drives with you.
@@ -238,7 +251,7 @@ export default {
         }
         if (state.stage === 'ascent' && !blocked) {
           ascT += dt; evT += dt;
-          const h = Math.min(1, alt() / 100); scene.background.setRGB(0.61 * (1 - h), 0.78 * (1 - h), 0.94 * (1 - h)); if (alt() > 60) scene.fog = null; else if (scene.fog) scene.fog.far = 500 + alt() * 50;
+          const h = Math.min(1, alt() / 100); scene.background.setRGB(0.61 * (1 - h), 0.78 * (1 - h), 0.94 * (1 - h)); daySky.material.opacity = 1 - h; daySky.visible = h < 0.999; if (alt() > 60) scene.fog = null; else if (scene.fog) scene.fog.far = 500 + alt() * 50;
           out.position.y = -alt() * 30; out.visible = alt() < 3; if (sky) sky.earth.position.y = 44 - 300 - Math.max(6, 220 - alt() * 0.55); if (sky) sky.atm.position.copy(sky.earth.position); player.seat.pos.y = 44 + 1.15;
           const amp = settings.reducedMotion ? 0 : (ascT < 46 ? 0.012 * gf() : 0); shake.set((Math.random() - 0.5) * amp, (Math.random() - 0.5) * amp, 0); player.seat.pos.add(shake);
           const ev = EVENTS[evI]; if (ev && ascT >= ev[0]) { if (evT > ascT - ev[0] + 0.1) evT = ascT - ev[0]; if (!ev[3]) { hud.cap(`[${ev[2]}: automatic]`, 1500); evI++; evT = 0; } else if (Math.abs(ascT - ev[0]) < dt * 1.5) { sfx.alarm(); hud.flash(`${ev[2]}! Press ${ev[3]}.`, '', 3500); } }
@@ -253,8 +266,8 @@ export default {
     function finish(pe, ap) {
       const c = career(); c.chapter = 'graduated'; save();
       finishExercise(ctx, { id: 'launch', title: 'Launch Day', xp: 400, badge: ['launch-candidate', 'junior-astronaut'],
-        continueLabel: ctx.mode === 'story' ? '🪐 Fly to the solar system ▸' : 'Main menu', next: ctx.mode === 'story' ? 'You are a Junior Astronaut! Your next missions are out among the planets.' : 'Return to the main menu.',
-        onContinue: rt => { rt.exit(); if (ctx.mode === 'story') setTimeout(() => window.__astrolab?.menuAction?.('start'), 300); },
+        continueLabel: ctx.mode === 'story' ? '🎬 Credits ▸' : 'Main menu', next: ctx.mode === 'story' ? 'You are a Junior Astronaut! Your next mission is on the Moon: Lunar Mission on the main menu.' : 'Return to the main menu.',
+        onContinue: rt => { rt.exit(); if (ctx.mode === 'story') setTimeout(() => showEndCredits(), 300); }, // end of the story: the team credits, then the main menu
         science: `Final orbit: ${Math.round(ap)} × ${Math.round(pe)} km. Rockets launch towards the east to borrow Earth's spin, and climb out of the thick lower air before turning sideways to build speed: about 28,000 km/h is needed to stay in low Earth orbit. Max Q is the moment of greatest air pressure on the rocket, so engines throttle down to protect it. This launch was simplified.` });
     }
   }

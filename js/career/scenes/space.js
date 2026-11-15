@@ -15,9 +15,12 @@ function makeEarthTex() {
 }
 export function spaceBackdrop(scene, { earthPos = [0, -60, -80], earthR = 50, sun = [80, 40, 30], stars = 1800, center = [0, 0, 0] } = {}) {
   const pos = new Float32Array(stars * 3);
-  for (let i = 0; i < stars; i++) { const u = Math.random() * 2 - 1, a = Math.random() * Math.PI * 2, r = 360, q = Math.sqrt(1 - u * u); pos.set([r * q * Math.cos(a), r * u, r * q * Math.sin(a)], i * 3); }
+  for (let i = 0; i < stars; i++) { const u = Math.random() * 2 - 1, a = Math.random() * Math.PI * 2, r = 300, q = Math.sqrt(1 - u * u); pos.set([r * q * Math.cos(a), r * u, r * q * Math.sin(a)], i * 3); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const st = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false })); st.position.set(...center); scene.add(st);
+  // the star sphere is re-centred on the camera every frame (radius 300, inside the 400 m far plane): before, when the player
+  // stood away from its centre, stars straight ahead lay beyond the far plane and vanished around the middle of the view
+  const st = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, fog: false, depthWrite: false })); st.position.set(...center); st.frustumCulled = false; st.renderOrder = -1;
+  st.onBeforeRender = (r, s, cam) => { st.position.copy(cam.position); st.updateMatrixWorld(); }; scene.add(st);
   const earth = new THREE.Mesh(new THREE.SphereGeometry(earthR, 64, 40), new THREE.MeshStandardMaterial({ map: makeEarthTex(), roughness: 0.9, emissive: 0x0a1a3a, emissiveIntensity: 0.25 }));
   earth.position.set(...earthPos); earth.rotation.z = 0.4; scene.add(earth);
   const atm = new THREE.Mesh(new THREE.SphereGeometry(earthR * 1.025, 48, 32), new THREE.MeshBasicMaterial({ color: 0x6ab8ff, transparent: true, opacity: 0.18, side: THREE.BackSide })); atm.position.copy(earth.position); scene.add(atm);

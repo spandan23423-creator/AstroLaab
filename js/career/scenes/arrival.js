@@ -1,7 +1,7 @@
 // ASTRO LAB Career — Chapter 1, Arrival: say goodbye to Bug and Cat in front of the Astronaut Training Centre and walk to the doors.
 import * as THREE from '../../../vendor/three.module.js';
 import { TEX, MAT } from '../models/materials.js';
-import { makeCar, makeTree, makeLamppost, makeFlag, waveFlag, makeTrainingCentre, makeDisplayRocket, makeFence } from '../models/outdoor.js';
+import { makeCar, makeTree, makeLamppost, makeFlag, waveFlag, makeTrainingCentre, makeDisplayRocket, makeFence, makeDaySky } from '../models/outdoor.js';
 import { makePerson, animatePerson } from '../models/humans.js';
 import { makePlant, box } from '../models/house.js';
 import { LOOKS } from '../data/people.js';
@@ -20,7 +20,7 @@ export default {
 
   async build(ctx) {
     const { scene, world, player, ix, hud, sfx } = ctx;
-    scene.background = new THREE.Color(0xa9cdee); scene.fog = new THREE.Fog(0xbcd7ef, 60, 260);
+    scene.background = new THREE.Color(0x62a0e0); scene.fog = new THREE.Fog(0xcfe4f6, 60, 300); scene.add(makeDaySky(380)); // same blue sky with clouds as the drive
     world.camera.far = 500; world.camera.updateProjectionMatrix();
     scene.add(new THREE.HemisphereLight(0xdfefff, 0x6a7a55, 1.05));
     const sun = world.shadowLight(new THREE.DirectionalLight(0xfff1d6, 2.4)); sun.position.set(25, 40, 25); sun.target.position.set(0, 0, -5);
@@ -55,7 +55,8 @@ export default {
     // the family car, parked; Bug and Cat beside it
     const car = makeCar(0x3a6ea5, { interior: false }); car.position.set(6, 0, 8.5); scene.add(car); player.addBox(5.05, 6.95, 6.25, 10.75, 0, 1.6);
     const bug = makePerson(LOOKS.bug); bug.root.position.set(3.0, 0, 6.2); bug.root.rotation.y = 2.2; scene.add(bug.root); player.addBox(2.75, 3.25, 5.95, 6.45, 0, 1.8);
-    const cat = makePerson(LOOKS.cat); cat.root.position.set(2.4, 0, 7.4); cat.root.rotation.y = 2.0; scene.add(cat.root); player.addBox(2.15, 2.65, 7.15, 7.65, 0, 1.8);
+    for (const r of [bug]) { r.lookRange = 0.55; r.lookRate = 2.5; } /* Bug and Cat only turn their heads a little to follow you, smoothly */
+    const cat = makePerson(LOOKS.cat); cat.root.position.set(2.4, 0, 7.4); cat.lookRange = 0.55; cat.lookRate = 2.5; cat.root.rotation.y = 2.0; scene.add(cat.root); player.addBox(2.15, 2.65, 7.15, 7.65, 0, 1.8);
     let talking = false;
     const bye = async () => {
       if (talking) return; talking = true;

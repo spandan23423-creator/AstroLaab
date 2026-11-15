@@ -89,10 +89,28 @@ export function makeDesk() {
 }
 export function makeChair(col = 0x2e3e66) { const g = new THREE.Group(), m = std(col), metal = MAT.metal(0x3c4250); box(0.45, 0.06, 0.45, m, 0, 0.46, 0, g); box(0.45, 0.45, 0.05, m, 0, 0.72, 0.21, g); for (const [x, z] of [[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]]) box(0.03, 0.44, 0.03, metal, x, 0.22, z, g); return shadowAll(g); }
 export function makeTelescope() {
-  const g = new THREE.Group(), metal = MAT.metal(0x2b2f38), white = std(0xf2f2f2, { roughness: 0.35 });
-  for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2; const l = cyl(0.012, 0.012, 1.15, metal, Math.cos(a) * 0.22, 0.55, Math.sin(a) * 0.22, g); l.rotation.set(Math.sin(a) * 0.38, 0, -Math.cos(a) * 0.38); }
-  const tube = cyl(0.07, 0.07, 0.9, white, 0, 1.2, 0, g); tube.rotation.z = 1.0; cyl(0.075, 0.075, 0.05, metal, -0.38, 1.44, 0, g).rotation.z = 1.0;
-  cyl(0.02, 0.02, 0.1, metal, 0.32, 0.98, 0, g).rotation.z = 1.0;
+  // A proper refractor on an alt-azimuth tripod: three legs splayed out from a mount head, an accessory tray, a fork that
+  // holds the tube, a dew shield, eyepiece and finder scope. The tube points along -z, tilted up about 35 degrees.
+  const g = new THREE.Group(), metal = MAT.metal(0x2b2f38), steel = MAT.metal(0x9aa0aa), white = std(0xf2f2f2, { roughness: 0.35 }), black = std(0x15171c, { roughness: 0.6 });
+  const HEAD = 1.05, SPREAD = 0.34, up = new THREE.Vector3(0, 1, 0);
+  for (let i = 0; i < 3; i++) { // legs from the floor to the head
+    const a = i / 3 * Math.PI * 2 + Math.PI / 6, foot = new THREE.Vector3(Math.cos(a) * SPREAD, 0, Math.sin(a) * SPREAD), top = new THREE.Vector3(Math.cos(a) * 0.05, HEAD - 0.04, Math.sin(a) * 0.05);
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.016, foot.distanceTo(top), 8), metal); leg.position.copy(foot).add(top).multiplyScalar(0.5); leg.quaternion.setFromUnitVectors(up, top.clone().sub(foot).normalize()); g.add(leg);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), black); tip.position.copy(foot).setY(0.01); g.add(tip);
+  }
+  const tray = cyl(0.12, 0.12, 0.012, metal, 0, 0.42, 0, g, 3); tray.rotation.y = Math.PI / 6;           // accessory tray (spreader)
+  cyl(0.07, 0.08, 0.06, metal, 0, HEAD, 0, g, 16);                                                      // mount head
+  const az = new THREE.Group(); az.position.y = HEAD + 0.03; g.add(az);
+  for (const sx of [-1, 1]) box(0.02, 0.2, 0.06, steel, sx * 0.1, 0.1, 0, az);                          // fork arms
+  box(0.22, 0.02, 0.07, steel, 0, 0.0, 0, az);
+  const alt = new THREE.Group(); alt.position.y = 0.17; alt.rotation.x = 0.6; az.add(alt);              // ~35 degrees up
+  const tube = cyl(0.065, 0.065, 0.95, white, 0, 0, 0, alt, 24); tube.rotation.x = Math.PI / 2;          // optical tube along -z
+  const dew = cyl(0.072, 0.072, 0.18, black, 0, 0, -0.52, alt, 24); dew.rotation.x = Math.PI / 2;       // dew shield at the front
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(0.062, 24), std(0x2a4a6a, { roughness: 0.05, metalness: 0.6 })); lens.position.z = -0.6; lens.rotation.y = Math.PI; alt.add(lens);
+  const back = cyl(0.05, 0.06, 0.1, black, 0, 0, 0.52, alt, 16); back.rotation.x = Math.PI / 2;           // focuser
+  const ep = cyl(0.018, 0.018, 0.1, black, 0, 0.06, 0.56, alt, 10); ep.rotation.x = -0.6;                 // eyepiece, angled up to the eye
+  const fs = cyl(0.016, 0.016, 0.22, black, 0.08, 0.08, -0.1, alt, 10); fs.rotation.x = Math.PI / 2;      // finder scope
+  box(0.02, 0.05, 0.02, steel, 0.06, 0.06, -0.1, alt);
   return shadowAll(g);
 }
 export function makeWardrobe() { const g = new THREE.Group(), w = std(0xe8e2d6, { roughness: 0.5 }); box(1.2, 2.1, 0.58, w, 0, 1.05, 0, g); box(0.01, 2.0, 0.01, std(0x9a9488), 0, 1.05, 0.295, g); for (const sd of [-1, 1]) cyl(0.01, 0.01, 0.18, MAT.metal(0xb0a080), sd * 0.06, 1.1, 0.31, g); return g; }
@@ -109,7 +127,7 @@ export function makeSofa(len = 2.1, col = 0x5a6e8c) {
   return shadowAll(g);
 }
 export function makeCoffeeTable() { const g = new THREE.Group(), w = std(0x6b4a2e, { map: TEX.wood([1, 0.6]) }); box(1.1, 0.05, 0.6, w, 0, 0.42, 0, g); for (const [x, z] of [[-0.5, -0.25], [0.5, -0.25], [-0.5, 0.25], [0.5, 0.25]]) box(0.05, 0.4, 0.05, w, x, 0.2, z, g); box(0.25, 0.02, 0.2, std(0xd8d0c0), -0.2, 0.455, 0.05, g); cyl(0.04, 0.035, 0.1, std(0xf2f2f2, { roughness: 0.3 }), 0.25, 0.5, -0.05, g); return shadowAll(g); }
-export function makeTV() { const g = new THREE.Group(); box(1.8, 0.5, 0.45, std(0x3a2a20, { map: TEX.wood([1, 0.4]) }), 0, 0.25, 0, g); box(1.3, 0.75, 0.05, std(0x111216, { roughness: 0.25, metalness: 0.3 }), 0, 0.98, -0.05, g); const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.24, 0.69), new THREE.MeshStandardMaterial({ color: 0x0a0d14, roughness: 0.1, metalness: 0.5 })); scr.position.set(0, 0.98, -0.02); g.add(scr); box(0.3, 0.03, 0.2, std(0x111216), 0, 0.52, -0.05, g); return shadowAll(g); }
+export function makeTV() { const g = new THREE.Group(); box(1.8, 0.5, 0.45, std(0x3a2a20, { map: TEX.wood([1, 0.4]) }), 0, 0.25, 0, g); box(1.3, 0.75, 0.05, std(0x111216, { roughness: 0.25, metalness: 0.3 }), 0, 0.98, -0.05, g); const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.24, 0.69), new THREE.MeshStandardMaterial({ color: 0x0a0d14, roughness: 0.1, metalness: 0.5 })); scr.position.set(0, 0.98, -0.018); g.add(scr); for (const [w, h2, x, y] of [[1.3, 0.04, 0, 0.98 + 0.355], [1.3, 0.04, 0, 0.98 - 0.355], [0.04, 0.75, 0.63, 0.98], [0.04, 0.75, -0.63, 0.98]]) box(w, h2, 0.012, std(0x111216, { roughness: 0.25, metalness: 0.3 }), x, y, -0.012, g); /* TV frame in front of the picture's edges */ box(0.3, 0.03, 0.2, std(0x111216), 0, 0.52, -0.05, g); return shadowAll(g); }
 export function makeBookshelf(w = 1.8, hgt = 2.0) {
   const g = new THREE.Group(), wd = std(0x5c3d24, { map: TEX.wood([1, 1]) }); box(w, hgt, 0.04, wd, 0, hgt / 2, -0.16, g);
   for (const sd of [-1, 1]) box(0.04, hgt, 0.34, wd, sd * w / 2, hgt / 2, 0, g);

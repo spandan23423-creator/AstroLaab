@@ -24,7 +24,17 @@ export default {
     const { scene, world, player, ix, carry, hud, state, sfx } = ctx;
     scene.background = new THREE.Color(0x0d1018);
     // Room
-    const shell = roomShell({ w: W, d: D, hgt: H }); scene.add(shell.group);
+    const shell = roomShell({ w: W, d: D, hgt: H, gaps: [{ side: 'e', at: -2.4, w: 1.3, h: 2.25 }] }); scene.add(shell.group); // doorway behind the EXIT door
+    // the room behind the exit door: a lit changing room / corridor towards the training hall (before, the door opened onto
+    // the bare back of the wall). Walls are solid; you see it when the door slides open.
+    { const RX = W / 2 + 2.6, RZ = -2.4, room = roomShell({ w: 5, d: 4.4, hgt: 2.9, x: RX, z: RZ, gaps: [{ side: 'w', at: 0, w: 1.3, h: 2.25 }] }); scene.add(room.group);
+      for (const [x0, x1, z0, z1] of room.colliders) player.addBox(x0, x1, z0, z1);
+      const rl = new THREE.PointLight(0xfff1dc, 6, 8, 1.4); rl.position.set(RX, 2.5, RZ); scene.add(rl); const cl = makeCeilingLight(1.2, 0.3); cl.position.set(RX, 2.87, RZ); scene.add(cl);
+      for (let i = 0; i < 4; i++) { const lk = makeLocker(); lk.position.set(RX - 1.2 + i * 0.75, 0, RZ - 2.0); scene.add(lk); }
+      player.addBox(RX - 1.6, RX + 1.6, RZ - 2.2, RZ - 1.6, 0, 2);
+      const bn = makeBench(); bn.position.set(RX + 0.6, 0, RZ + 1.4); scene.add(bn); player.addBox(RX - 0.2, RX + 1.4, RZ + 1.1, RZ + 1.7, 0, 0.6);
+      const hs = makeSign('TRAINING HALL', 'Junior Astronaut Training Program →', 1.6); hs.position.set(RX + 2.47, 1.9, RZ); hs.rotation.y = -Math.PI / 2; scene.add(hs);
+      const hd = makeSlidingDoor(1.2, 2.2, 'HALL'); hd.position.set(RX + 2.41, 0, RZ + 0.9); hd.rotation.y = -Math.PI / 2; scene.add(hd); }
     for (const [x0, x1, z0, z1] of shell.colliders) player.addBox(x0, x1, z0, z1);
     // Lights
     scene.add(new THREE.HemisphereLight(0xf2f5ff, 0x4a4e58, 0.75));
@@ -92,11 +102,11 @@ export default {
       talking = false; okafor.wave = 2.2; ctx.done('talk'); door.userData.lamp.material.color.set(0x3fe0a0); door.userData.lamp.material.emissive.set(0x3fe0a0);
     }
     // Exit door (east wall)
-    const door = makeSlidingDoor(1.2, 2.2, 'EXIT'); door.position.set(W / 2 - 0.09, 0, -2.4); door.rotation.y = -Math.PI / 2; scene.add(door);
+    const door = makeSlidingDoor(1.2, 2.2, 'EXIT'); door.position.set(W / 2 - 0.09, 0, -2.4); door.rotation.y = -Math.PI / 2; scene.add(door); const doorCol = player.addBox(W / 2 - 0.15, W / 2 + 0.1, -3.05, -1.75, 0, 2.3); // closed door is solid
     let opening = false;
     makeUsable(door, { label: 'Exit door', verb: 'Open', range: 2.6, enabled: () => !opening, use: () => {
       if (!ctx.isDone('talk')) { sfx.wrong(); hud.flash(ctx.isDone('place') ? 'Report to Instructor Okafor before you leave.' : 'Finish the other objectives first.', 'bad'); return; }
-      opening = true; sfx.door(); hud.cap('[Door slides open]');
+      opening = true; doorCol.on = false; sfx.door(); hud.cap('[Door slides open]');
       ctx.done('door');
       setTimeout(() => finish(), 1100);
     } }); ix.add(door);

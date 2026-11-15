@@ -19,7 +19,7 @@ export const SURFACE_BODIES = {
     atm: { rho: 0, label: 'None (exosphere ~10⁻¹⁵ bar)' },
     temp: { sun: 'up to +120 °C', shade: 'down to −170 °C' },
     dose: 1.58e-5, doseNote: 'Chang\'e 4 measured ~1.4 mSv per day on the lunar surface (about 200× Earth\'s surface rate).',
-    sunAU: 1, sky: 'black', starOpacity: 0.18,
+    sunAU: 1, sky: 'black', starOpacity: 0.42,
     facts: ['No air means no sound, no wind and no weather — dust kicked up flies in perfect parabolas and falls straight back.', 'You weigh about 1/6 of your Earth weight here (1.62 m/s² vs 9.81 m/s²).', 'Stars are hard to see in daylight: the bright ground and Sun overwhelm your eyes and cameras, which is why Apollo photos show a black, starless sky.']
   }
 };

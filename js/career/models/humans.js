@@ -203,10 +203,12 @@ export function animatePerson(rig, dt, { lookAt = null, talking = false } = {}) 
     rig.head.getWorldPosition(v); const dx = lookAt.x - v.x, dy = lookAt.y - v.y, dz = lookAt.z - v.z;
     rig.root.getWorldQuaternion(q); const ry = eul.setFromQuaternion(q, 'YXZ').y;
     yaw = Math.atan2(dx, dz) - ry; while (yaw > Math.PI) yaw -= Math.PI * 2; while (yaw < -Math.PI) yaw += Math.PI * 2;
-    yaw = Math.max(-1.1, Math.min(1.1, yaw)); pitch = Math.max(-0.5, Math.min(0.45, -Math.atan2(dy, Math.hypot(dx, dz))));
+    const lr = rig.lookRange ?? 1.1; // a scene can narrow how far an NPC turns to follow you (rig.lookRange, radians)
+    yaw = Math.max(-lr, Math.min(lr, yaw)); pitch = Math.max(-0.5 * lr / 1.1, Math.min(0.45 * lr / 1.1, -Math.atan2(dy, Math.hypot(dx, dz))));
   }
-  rig.neck.rotation.y += (yaw * 0.55 - rig.neck.rotation.y) * k; rig.head.rotation.y += (yaw * 0.45 - rig.head.rotation.y) * k;
-  rig.head.rotation.x += (pitch - rig.head.rotation.x) * k;
+  const kl = rig.lookRate ? Math.min(1, dt * rig.lookRate) : k;
+  rig.neck.rotation.y += (yaw * 0.55 - rig.neck.rotation.y) * kl; rig.head.rotation.y += (yaw * 0.45 - rig.head.rotation.y) * kl;
+  rig.head.rotation.x += (pitch - rig.head.rotation.x) * kl;
   rig.eyes.forEach(e => { e.rotation.y = yaw * 0.25; e.rotation.x = pitch * 0.3; });
   // blink
   const bl = (t % 3.8) < 0.13; rig.lids.forEach(l => { l.scale.y = bl ? 1.0 : 0.35; });

@@ -103,7 +103,10 @@ export default {
     const desk = H.makeDesk(); desk.position.set(-2.2, UP, -4.55); scene.add(desk); player.addBox(-2.95, -1.45, -5, -4.2, UP, UP + 0.8);
     const chair = H.makeChair(); chair.position.set(-2.1, UP, -3.85); chair.rotation.y = 0.3; scene.add(chair); player.addBox(-2.35, -1.85, -4.1, -3.6, UP, UP + 0.9);
     const rocket = H.makeRocketModel(); rocket.position.set(-1.65, UP + 0.76, -4.75); scene.add(rocket);
-    const scope = H.makeTelescope(); scope.position.set(-0.5, UP, -4.3); scope.rotation.y = -0.6; scene.add(scope); player.addBox(-0.8, -0.2, -4.6, -4.0, UP, UP + 1.5);
+    // telescope by the window, aimed out at the sky (it used to stand by the door, in the way). A small warm lamp keeps it
+    // readable in the dim morning room.
+    const scope = H.makeTelescope(); scope.position.set(-3.7, UP, -4.35); scope.rotation.y = -0.95; scene.add(scope); player.addBox(-4.05, -3.35, -4.7, -4.0, UP, UP + 1.4);
+    const scopeLight = new THREE.PointLight(0xffe2b8, 1.2, 2.6, 1.6); scopeLight.position.set(-3.5, UP + 2.0, -3.9); scene.add(scopeLight);
     const ward = H.makeWardrobe(); ward.position.set(-0.6, UP, 0.66); ward.rotation.y = Math.PI; scene.add(ward); player.addBox(-1.25, 0.05, 0.35, 1, UP, TOP);
     const p1 = H.makePoster('saturn'); p1.position.set(2.33, UP + 1.55, -1.6); p1.rotation.y = -Math.PI / 2; scene.add(p1);
     const p2 = H.makePoster('moon'); p2.position.set(-3.4, UP + 1.6, 0.93); p2.rotation.y = Math.PI; scene.add(p2);
@@ -165,7 +168,8 @@ export default {
 
     // ---------- Bug and Cat ----------
     const bug = makePerson(LOOKS.bug); bug.root.position.set(-0.45, 0.08, 3.9); bug.root.rotation.y = Math.PI / 2; bug.sitTarget = bug.sit = 1; scene.add(bug.root);
-    const cat = makePerson(LOOKS.cat); cat.root.position.set(1.0, 0, 2.3); cat.root.rotation.y = Math.PI / 2 + 0.35; scene.add(cat.root); player.addBox(0.75, 1.25, 2.05, 2.55, 0, 1.8);
+    for (const r of [bug]) { r.lookRange = 0.55; r.lookRate = 2.5; } /* Bug and Cat only turn their heads a little to follow you, smoothly */
+    const cat = makePerson(LOOKS.cat); cat.root.position.set(1.0, 0, 2.3); cat.lookRange = 0.55; cat.lookRate = 2.5; cat.root.rotation.y = Math.PI / 2 + 0.35; scene.add(cat.root); player.addBox(0.75, 1.25, 2.05, 2.55, 0, 1.8);
     const mug = H.cyl(0.04, 0.035, 0.1, MAT.std({ color: 0xd8a83a, roughness: 0.35 })); holdInHand(bug, mug, -1); mug.position.set(0, -0.12, 0.05);
     const env = H.makeEnvelope(); env.scale.setScalar(1.15);
     let talking = null;
