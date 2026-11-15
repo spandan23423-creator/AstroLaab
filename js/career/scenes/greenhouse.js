@@ -86,7 +86,7 @@ export default {
       airlock: () => { const g = new THREE.Group(), wm = std(0xe8ebf0, { roughness: 0.5 }); for (const sx of [-1, 1]) box(0.08, 2.4, 1.6, wm, sx * 1.0, 1.2, 6.7, g); box(2.08, 0.08, 1.6, wm, 0, 2.44, 6.7, g); box(2.0, 0.04, 1.6, std(0x9aa0aa), 0, 0.02, 6.7, g);
         for (const sx of [-1, 1]) box(0.45, 2.4, 0.08, wm, sx * 0.78, 1.2, 7.5, g); box(1.2, 0.3, 0.08, wm, 0, 2.25, 7.5, g);
         const door = box(1.1, 2.1, 0.05, std(0x3a3f4a), 0, 1.05, 7.56, g); const win = new THREE.Mesh(new THREE.CircleGeometry(0.16, 20), new THREE.MeshStandardMaterial({ color: 0x9ac8f0, transparent: true, opacity: 0.5 })); win.position.set(0, 0.5, 0.03); door.add(win); g.userData.door = door; return g; },
-      power: () => { const g = new THREE.Group(); for (let i = 0; i < 3; i++) { const p = new THREE.Group(); box(1.6, 0.04, 1, std(0x1a2a5a, { metalness: 0.4, roughness: 0.3 }), 0, 0, 0, p); p.rotation.x = -0.5; p.position.set(-8.6 + i * 1.8, 1.1, 5.4); g.add(p); cyl(0.04, 0.04, 1, MAT.metal(), -8.6 + i * 1.8, 0.5, 5.4, g, 6); } box(0.8, 0.6, 0.5, std(0x3a3f4a), -6.6, 0.3, 4.4, g); return g; },
+      power: () => { const g = new THREE.Group(); for (let i = 0; i < 3; i++) { const p = new THREE.Group(); box(1.6, 0.04, 1, std(0x1a2a5a, { metalness: 0.4, roughness: 0.3 }), 0, 0, 0, p); p.rotation.x = -0.5; p.position.set(-11.6 + i * 1.8, 1.1, 5.4); g.add(p); cyl(0.04, 0.04, 1, MAT.metal(), -11.6 + i * 1.8, 0.5, 5.4, g, 6); } box(0.8, 0.6, 0.5, std(0x3a3f4a), -8.6, 0.3, 4.4, g); return g; }, // solar field 3 m west of the dome: the east panel used to overlap the shell
       // the grow-light rack and the air unit are assembled by hand (see the assemblies below); these add the finishing touches
       lights: () => { const g = new THREE.Group(), eff = has('ledEff'); const l = new THREE.PointLight(eff ? 0xd06aff : 0xfff2e0, 6, 8, 1.4); l.position.set(0, 2.2, 0); g.add(l); setLeds(true); return g; },
       air: () => new THREE.Group(),
@@ -98,7 +98,7 @@ export default {
     const markers = {}, built = {};
     // Collision for every built piece (no walking through tanks, beds or the dome), and the glass dome blocks using things through it
     const COLS = { shell: [[-5.2, -5.0, -3.9, 5.9], [5.0, 5.2, -3.9, 5.9], [-5.5, 5.5, -4.0, -3.85], [-5.5, -0.62, 5.85, 5.95], [0.62, 5.5, 5.85, 5.95]], airlock: [[-1.06, -0.94, 5.9, 7.5], [0.94, 1.06, 5.9, 7.5], [-1.0, -0.55, 7.46, 7.54], [0.55, 1.0, 7.46, 7.54]],
-      water: [[3.6, 4.8, -3.4, -2.2], [3.15, 3.65, -3.3, -2.2]], recycler: [[3.7, 4.7, 2.0, 2.8]], beds: [[-1.9, -0.7, -2.15, 2.15], [0.7, 1.9, -2.15, 2.15]], control: [[-4.72, -4.48, 2.08, 2.32]], power: [[-7.05, -6.15, 4.1, 4.7], [-8.65, -8.55, 5.35, 5.45], [-6.85, -6.75, 5.35, 5.45], [-5.05, -4.95, 5.35, 5.45]] };
+      water: [[3.6, 4.8, -3.4, -2.2], [3.15, 3.65, -3.3, -2.2]], recycler: [[3.7, 4.7, 2.0, 2.8]], beds: [[-1.9, -0.7, -2.15, 2.15], [0.7, 1.9, -2.15, 2.15]], control: [[-4.72, -4.48, 2.08, 2.32]], power: [[-9.05, -8.15, 4.1, 4.7], [-11.65, -11.55, 5.35, 5.45], [-9.85, -9.75, 5.35, 5.45], [-8.05, -7.95, 5.35, 5.45]] };
     function showPiece(id) { const p = piece[id](); p.traverse(o => { if (o.isMesh && !o.material.transparent) { o.castShadow = true; o.receiveShadow = true; } }); G.add(p); built[id] = p;
       for (const [x0, x1, z0, z1] of COLS[id] || []) player.addBox(x0, x1, z0, z1, 0, id === 'beds' ? 1 : 3);
       if (id === 'shell') { p.userData.blocker = true; ix.blockers.push(p); }
@@ -148,7 +148,7 @@ export default {
     // control panel (appears with step 11)
     const controlScreen = makeScreen(1.0, 0.65, infoScreen('GREENHOUSE CONTROL', ['Systems offline'], { w: 512, hgt: 320 }), [512, 320]);
     controlScreen.position.set(-4.6, 1.5, 2.2); controlScreen.rotation.y = Math.PI / 2; controlScreen.visible = false; scene.add(controlScreen);
-    box(0.1, 1.2, 0.1, MAT.metal(), 0, -0.6, -0.05, controlScreen);
+    box(0.1, 1.5, 0.1, MAT.metal(), 0, -0.75, -0.05, controlScreen); // the post reaches the floor (it used to stop 0.3 m above it)
 
     // ================= Hands-on assembly (11B): the grow-light rack and the life-support air unit =================
     const metal = MAT.metal(0xb8bec8), ledCol = () => has('ledEff') ? 0xd04aff : 0xfff4e0;

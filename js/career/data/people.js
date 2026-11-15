@@ -11,7 +11,7 @@ export const LOOKS = {
   botanist: { skin: 0x5a3a28, hair: 0x111111, hairStyle: 'bun', female: true, top: 'jacket', topColor: 0xeef2ea, shirt: 0x3a8a4a, pants: 0x2a3a2a, height: 1.7, glasses: true, eyes: 0x2a1a10 },
   coach: { skin: 0xf0c8a8, hair: 0xc89a3a, hairStyle: 'short', top: 'sweater', topColor: 0x2b6a4a, shirt: 0xeeeeee, pants: 0x1e2430, height: 1.82, build: 1.08, eyes: 0x3d6a8a },
   diver: { skin: 0x7a5038, hair: 0x111111, hairStyle: 'bald', top: 'shirt', shirt: 0x1a1d24, pants: 0x1a1d24, shoes: 0x1a1d24, height: 1.75, eyes: 0x2a1a10 },
-  commander: { skin: 0xe4b494, hair: 0x6a6a6a, hairStyle: 'bob', female: true, top: 'jacket', topColor: 0x4a5a3a, shirt: 0xdfe6f2, pants: 0x3a3f2a, height: 1.72, eyes: 0x4a6a3a },
+  commander: { skin: 0xe4b494, hair: 0x4a3a30, hairStyle: 'bob', female: true, top: 'jacket', topColor: 0x4a5a3a, shirt: 0xdfe6f2, pants: 0x3a3f2a, height: 1.72, eyes: 0x4a6a3a },
   // station crew in blue flight suits (emergency drill)
   crewC: { skin: 0xb58060, hair: 0x2a1a10, hairStyle: 'short', top: 'jacket', topColor: 0x2b4f8f, shirt: 0x2b4f8f, pants: 0x2b4f8f, shoes: 0x1a1d24, height: 1.78, eyes: 0x2a1a10, moustache: true },
   crewD: { skin: 0xf0c8a8, hair: 0xb8732e, hairStyle: 'bun', female: true, top: 'jacket', topColor: 0x2b4f8f, shirt: 0x2b4f8f, pants: 0x2b4f8f, shoes: 0x1a1d24, height: 1.68, eyes: 0x3d6a8a },

@@ -48,7 +48,7 @@ export default {
     const door = new THREE.Group(); box(1.5, 2.25, 0.08, std(0xb8bec8, { roughness: 0.5 }), 0.75, 0, 0, door); box(0.3, 0.06, 0.06, MAT.metal(0x3a3f4a), 1.2, 0, 0.06, door);
     door.position.set(-0.75, 1.15, -4.25); door.rotation.y = -Math.PI / 2; scene.add(door);
     const doorCol = player.addBox(-0.8, 0.8, -4.3, -4.2, 0, 3); doorCol.on = false;
-    const nodeS = makeSign('NODE', 'Safe haven', 1.2, '#1f6b3a'); nodeS.position.set(0, 2.5, -7.98); scene.add(nodeS);
+    const nodeS = makeSign('NODE', 'Safe haven', 1.2, '#1f6b3a'); nodeS.position.set(0, 1.6, -7.98); /* below the STATION MOCK-UP title board: the two used to sit in exactly the same spot */ scene.add(nodeS);
     const labS = makeSign('LAB', 'Module', 1.2); labS.position.set(0, 2.5, 7.98); labS.rotation.y = Math.PI; scene.add(labS);
     // racks along the Lab walls
     const racks = [];
@@ -100,7 +100,8 @@ export default {
       makeUsable(rig.root, { label: name, verb: 'Talk to', range: 2.6, use: () => ctx.talk([{ who: name, text: !alarm ? (ctx.isDone('brief') ? 'Just running the morning checks. If an alarm goes off, follow the book and we\'ll follow you.' : 'Morning! Check in with Houston on the comm panel first.') : state.kind === 'fire' ? 'Masks on, power off, then the extinguisher. We\'re heading for the Node!' : 'We\'re heading for the Node. Don\'t close the hatch until we\'re through!' }]) }); ix.add(rig.root);
       return { name, rig, col, path: [], safe, home: [x, z, ry], inNode: false };
     });
-    const crewGo = () => crew.forEach((c, i) => { if (c.path.length || c.inNode) return; c.path = [[c.rig.root.position.x * 0.4, -1.0 - i * 0.3], [0, -3.4], [0, -4.8], c.safe]; c.rig.walkTarget = 1; });
+    // each crew member keeps to their own side of the hatch and the second one waits a moment, so they never walk through or stand inside each other
+    const crewGo = () => crew.forEach((c, i) => { if (c.path.length || c.inNode) return; const lane = i ? 0.28 : -0.28; c.wait = i * 1.4; c.path = [[c.rig.root.position.x * 0.4, -1.0 - i * 0.3], [lane, -3.4], [lane, -4.8], c.safe]; c.rig.walkTarget = 1; });
     const crewInNode = () => crew.every(c => c.inNode);
 
     const redrawCW = () => cw.userData.screen.redraw(infoScreen('CAUTION & WARNING', alarm ? [[`⚠ ${K.name}`, K.col], `Location: ${K.where}`, ctx.isDone('identify') ? ['Acknowledged', '#c9d6ff'] : ['Press to acknowledge', '#ffc857']] : ['All systems normal', ['●  No alarms', '#3fe0a0']], { w: 384, hgt: 240 }));
@@ -159,7 +160,7 @@ export default {
     // restore
     if (ctx.isDone('brief') && !ctx.isDone('respond')) { T.start(); setTimeout(startAlarm, 1500); }
     for (const id of state.done) effects(id);
-    if (ctx.isDone('report')) crew.forEach(c => { c.rig.root.position.set(c.safe[0], 0, c.safe[1]); c.inNode = true; if (state.kind !== 'depress') putOnMask(c.rig); });
+    if (ctx.isDone('report')) crew.forEach(c => { c.rig.root.position.set(c.safe[0], 0, c.safe[1]); Object.assign(c.col, { x0: c.safe[0] - 0.25, x1: c.safe[0] + 0.25, z0: c.safe[1] - 0.25, z1: c.safe[1] + 0.25 }); c.inNode = true; if (state.kind !== 'depress') putOnMask(c.rig); });
     const nozzleW = new THREE.Vector3(), aimDir = new THREE.Vector3(), tmpV = new THREE.Vector3(), fireC = new THREE.Vector3(2.0 - 0.3, 1.25, 2.0);
     function sprayStep(dt, on) {
       const held = ctx.carry.held, isExt = held === ext || held === ext2;
@@ -210,7 +211,8 @@ export default {
         if (fire.visible) { const k = fireHP / 100; flames.forEach((f, i) => { const s = (0.4 + 0.6 * k) * (0.85 + Math.sin(performance.now() / 90 + i * 1.7) * 0.15); f.scale.set(s, s * (1 + Math.sin(performance.now() / 70 + i) * 0.15), s); }); fireL.intensity = (5 + Math.sin(performance.now() / 50) * 1.5) * k; if (fireHP <= 0) fire.visible = false; }
         const cam = world.camera.position;
         for (const c of crew) {
-          if (c.path.length && !blocked) {
+          if (c.wait > 0 && !blocked) c.wait -= dt;
+          else if (c.path.length && !blocked) {
             const [tx, tz] = c.path[0], P = c.rig.root.position, dx = tx - P.x, dz = tz - P.z, d = Math.hypot(dx, dz);
             if (d < 0.08) { c.path.shift(); if (!c.path.length) { c.inNode = true; c.rig.walkTarget = 0; c.rig.root.rotation.y = 0; } }
             else { const sp = Math.min(d, dt * 1.1); P.x += dx / d * sp; P.z += dz / d * sp; let a = Math.atan2(dx, dz) - c.rig.root.rotation.y; a = Math.atan2(Math.sin(a), Math.cos(a)); c.rig.root.rotation.y += a * Math.min(1, dt * 8); }

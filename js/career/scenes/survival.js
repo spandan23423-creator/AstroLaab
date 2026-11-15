@@ -148,7 +148,7 @@ export default {
     function board() {
       heli.boarded = true; sfx.ui();
       const seatPos = heli.g.localToWorld(new THREE.Vector3(0.35, 1.55, 0.4));
-      player.seat = { pos: seatPos, yaw: Math.PI, yawRange: 1.2, pitchMin: -0.6, pitchMax: 0.5, roll: 0 }; player.yaw = player.seat.yaw; player.pitch = 0;
+      player.seat = { pos: seatPos, yaw: Math.PI, yawRange: 2.0, pitchMin: -0.8, pitchMax: 0.8, roll: 0 }; player.yaw = player.seat.yaw; player.pitch = 0;
       priya.root.visible = false; tomas.root.visible = false; // the crew climbs in with you
       hud.flash('Everyone is on board. Well done, crew!', 'good', 2500);
       setTimeout(() => { ctx.done('rescue'); finish(); }, 1600);

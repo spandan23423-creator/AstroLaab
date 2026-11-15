@@ -1,7 +1,8 @@
-// ASTRO LAB Career — main-menu dialogs: New Game, Resume, Training Modules, Achievements, Credits, Quit, Free Explore, controls guide.
+// ASTRO LAB Career — main-menu dialogs: New Game, Resume, Training Modules, Achievements, Credits, Quit, controls guide.
 import { h, openModal, closeAllModals } from '../../ui/dom.js';
 import { settings, saveSettings, progress } from '../../systems/core.js';
-import { BADGES } from '../../data/missions.js';
+import { BADGES, LUNAR_BADGES } from '../../data/missions.js';
+import { MOON_CREDITS } from '../../data/moonCredits.js';
 import { career, careerStarted, newCareer, playerLevel, levelRange } from '../state/careerSave.js';
 import { DIFFICULTIES, DIFFICULTY_ORDER } from '../state/difficulty.js';
 import { CAREER_BADGES } from '../data/badges.js';
@@ -13,7 +14,7 @@ export function initCareerMenus(a, startScene) { app = a; start = startScene; }
 // ---------- New Game ----------
 export function openNewGame() {
   if (careerStarted()) {
-    const m = openModal({ title: 'Start a new career?', body: h('div', {}, h('p', {}, 'You already have a career in progress. Starting over resets your story and training progress.'), h('p', { class: 'muted tiny' }, 'Your XP, badges, knowledge cards and Free Explore progress are kept.')),
+    const m = openModal({ title: 'Start a new career?', body: h('div', {}, h('p', {}, 'You already have a career in progress. Starting over resets your story and training progress.'), h('p', { class: 'muted tiny' }, 'Your XP, badges and Lunar Mission progress are kept.')),
       foot: [h('button', { class: 'btn', onclick: () => m.close() }, 'Cancel'), h('button', { class: 'btn primary', onclick: () => { m.close(); pickDifficulty(); } }, 'Start over')] });
   } else pickDifficulty();
 }
@@ -58,7 +59,6 @@ export function openTrainingModules() {
 export function openAchievements() {
   const lv = playerLevel(), [a, b] = levelRange(lv), pct = Math.round((progress.xp - a) / (b - a) * 100);
   const grid = list => h('div', { class: 'badge-grid' }, list.map(bd => h('div', { class: `badge ${progress.badges.includes(bd.id) ? '' : 'locked'}`, title: bd.desc }, h('span', { class: 'bi' }, bd.icon), h('b', {}, bd.name), h('small', {}, bd.desc))));
-  const careerIds = new Set(CAREER_BADGES.map(b => b.id));
   const got = CAREER_BADGES.filter(bd => progress.badges.includes(bd.id)).length;
   openModal({ title: '🏆 Achievements', wide: true, label: 'Achievements', body: h('div', {},
     h('div', { class: 'stats' }, h('div', { class: 'stat' }, h('b', {}, `Level ${lv}`), h('small', {}, `${progress.xp} XP · ${b - progress.xp} XP to level ${lv + 1}`)),
@@ -66,7 +66,7 @@ export function openAchievements() {
       h('div', { class: 'stat' }, h('b', {}, `${progress.badges.length}/${BADGES.length}`), h('small', {}, 'All badges'))),
     h('div', { class: 'xpbar big', role: 'progressbar', 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100 }, h('i', { style: `width:${pct}%` })),
     h('h3', {}, 'Astronaut training'), grid(CAREER_BADGES),
-    h('h3', {}, 'Free Explore'), grid(BADGES.filter(bd => !careerIds.has(bd.id))))
+    h('h3', {}, 'Lunar Mission'), grid(LUNAR_BADGES))
   });
 }
 
@@ -77,9 +77,10 @@ export function openCredits() {
     h('p', {}, 'An astronomy and astronaut-training game.'),
     h('h3', {}, 'Game'), h('p', {}, 'Game concept and specification: the ASTRO LAB team. Design, code, models and sound built with Claude (Anthropic).'),
     h('h3', {}, 'Characters'), h('p', {}, 'Bug and Cat, your parents. Instructor Okafor, Training Bay 1. Director D. Reyes, Junior Astronaut Training Program.'),
-    h('h3', {}, 'Technology'), h('p', {}, 'Three.js r169 (MIT licence). All 3D models, textures, music and sound effects are generated in code.'),
+    h('h3', {}, 'Technology'), h('p', {}, 'Three.js r169 (MIT licence). Music, sound effects and the remaining 3D models and textures are generated in code.'),
     h('h3', {}, 'Science sources'), h('p', {}, 'NASA (Human Research Program, Johnson Space Center astronaut training, planetary fact sheets), ESA, JAXA and peer-reviewed mission results.'),
-    h('h3', {}, 'Moon maps'), h('p', {}, 'Real moon maps are credited in Help → Image credits and textures/moons/CREDITS.md.'),
+    h('h3', {}, 'Moon map'), ...MOON_CREDITS.map(c => h('p', { class: 'tiny' }, `${c.name}: ${c.source}. ${c.licence}${c.note ? ' · ' + c.note : ''}.`)),
+    h('h3', {}, 'Imported 3D models'), h('p', { class: 'tiny' }, 'People, the family car, helicopter, training-centre building, greenhouse, tent, alarm clock, notice board and crops come from the owner\'s downloaded model collection (see models/CREDITS.md). Their authors\' licences come with the downloads.'),
     h('p', { class: 'muted tiny' }, 'ASTRO LAB is a fan-made educational game. It is not affiliated with or endorsed by NASA. "NASA-style" insignia in the game are original designs.')) });
 }
 
@@ -89,22 +90,11 @@ export function quitGame() {
     foot: [h('button', { class: 'btn', onclick: () => m.close() }, 'Cancel'), h('button', { class: 'btn primary', onclick: () => { m.close(); app.show('quit'); } }, 'Save & quit')] });
 }
 
-// ---------- Free Explore ----------
-export function openFreeExplore() {
-  const opt = (icon, name, desc, fn) => h('button', { class: 'cx-module as-btn', onclick: () => { closeAllModals(); fn(); } }, h('span', { class: 'cx-mi' }, icon), h('div', {}, h('b', {}, name), h('small', {}, desc)));
-  openModal({ title: '🌌 Free Explore', wide: true, label: 'Free Explore', body: h('div', { class: 'cx-modules' },
-    opt('🪐', 'Solar System Missions', 'Fly the 3D solar system, scan worlds, pass quizzes and follow the story missions.', () => app.menuAction('start')),
-    app.hasExploreSave() ? opt('⟳', 'Continue Solar System', 'Pick up your solar-system missions where you left off.', () => app.menuAction('continue')) : null,
-    opt('🧑‍🚀', 'Surface Expeditions', 'Walk, hop and drive on the Moon and other moons with real gravity.', () => app.menuAction('surface')),
-    opt('🧪', 'Simulation Lab', 'Six physics simulations: gravity, orbits, rockets, habitability, light, black holes.', () => app.menuAction('lab')),
-    opt('🔭', 'Celestial Explorer', '54 stars, galaxies, nebulae and more, with challenges.', () => app.menuAction('explorer'))) });
-}
-
 // ---------- Controls guide (career) ----------
 export const CAREER_KEYS = {
   desktop: [['W A S D / arrows', 'Walk'], ['Mouse (click the view first)', 'Look around'], ['Shift (hold)', 'Jog'], ['C or Ctrl (hold)', 'Crouch'], ['E or Enter', 'Use, pick up, place, talk'], ['R / Q', 'Rotate a held item'], ['G', 'Put a held item down'], ['1 – 4', 'Choose a dialogue answer'], ['Space / E', 'Next line of dialogue'], ['H', 'This controls guide'], ['Esc', 'Pause menu']],
   touch: [['Joystick (bottom-left)', 'Walk'], ['Drag on the view', 'Look around'], ['Tap an object', 'Use it'], ['✋ Use', 'Use what is under the dot'], ['⤵ Crouch', 'Crouch on / off'], ['⟳ Rotate', 'Rotate a held item'], ['⤓ Drop', 'Put a held item down'], ['» Jog', 'Hold to jog'], ['❚❚', 'Pause menu']],
-  special: [['Floating (low-g, pool, EVA)', 'Look at a handrail and press E to grab it. Hold W (or push the joystick forward) to push off where you look; Shift pushes harder. With nothing in view, E reels in your tether'], ['Pool', '⚖ button: trim your weight pockets'], ['Robotic arm', '1–6 pick a joint, W/S or ↑/↓ move it, P precision, V camera, C capture/release, Space E-STOP. On touch, use the arm panel'], ['Spacecraft and launch', 'Point at a switch or button and press E (or tap it)'], ['Orbit burn', 'Hold the 🔥 button at the top of the orbit'], ['Orbit roll', 'Hold Q / E (or ← / →, or the on-screen buttons) to fire thrusters against the roll']],
+  special: [['Floating (low-g, pool, EVA)', 'Look at a handrail and press E to grab it. Hold W (or push the joystick forward) to push off where you look; Shift pushes harder. With nothing in view, E reels in your tether'], ['Pool', '⚖ button: trim your weight pockets'], ['Spacecraft and launch', 'Point at a switch or button and press E (or tap it)'], ['Orbit burn', 'Hold the 🔥 button at the top of the orbit'], ['Orbit roll', 'Hold Q / E (or ← / →, or the on-screen buttons) to fire thrusters against the roll']],
   pad: [['Left stick', 'Walk'], ['Right stick', 'Look around'], ['Ⓐ (bottom)', 'Use / next line'], ['Ⓧ (left)', 'Rotate a held item'], ['Ⓨ (top)', 'Put item down'], ['L3 / R3', 'Crouch / jog'], ['D-pad', 'Choose a dialogue answer'], ['Start', 'Pause'], ['Back / Select', 'Controls guide']]
 };
 export function openCareerControls() {

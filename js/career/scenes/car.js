@@ -41,7 +41,7 @@ export default {
     const cat = makePerson(LOOKS.cat); cat.root.position.set(0.4, 0.13, -0.12); cat.root.rotation.y = Math.PI; cat.sitTarget = cat.sit = 1; car.add(cat.root);
     // Bug's hands on the wheel
     const R = bug.arms.find(a => a.side === 1), Lf = bug.arms.find(a => a.side === -1);
-    player.seat = { pos: EYE.clone(), yaw: 0, yawRange: 1.75, pitchMin: -0.6, pitchMax: 0.55, roll: 0 };
+    player.seat = { pos: EYE.clone(), yaw: 0, yawRange: 2.0, pitchMin: -0.8, pitchMax: 0.8, roll: 0 };
     player.floorAt = () => 0;
 
     // ---------- scenery pool: objects live at a road distance s and scroll past ----------

@@ -7,6 +7,7 @@ import { makeUsable } from './interact.js';
 import { sfx } from './audio.js';
 import { settings } from '../../systems/core.js';
 
+const _q = new THREE.Vector3();
 export class Floater {
   constructor(ctx, { bounds, start, yaw = 0, water = false, push = 0.8, hardPush = 1.7, bumpLimit = 1.1, onBump, buoyancy }) {
     this.ctx = ctx; this.bounds = bounds; this.water = water; this.push = push; this.hardPush = hardPush; this.bumpLimit = bumpLimit; this.onBump = onBump;
@@ -97,6 +98,14 @@ export class Floater {
       const P = this.pos; if (P.x < x0 - R || P.x > x1 + R || P.y < y0 - R || P.y > y1 + R || P.z < z0 - R || P.z > z1 + R) continue;
       const pen = [[P.x - (x0 - R), 'x', -1], [(x1 + R) - P.x, 'x', 1], [P.y - (y0 - R), 'y', -1], [(y1 + R) - P.y, 'y', 1], [P.z - (z0 - R), 'z', -1], [(z1 + R) - P.z, 'z', 1]].sort((a, c) => a[0] - c[0])[0];
       P[pen[1]] += pen[2] * pen[0]; hit = Math.max(hit, Math.abs(v[pen[1]])); v[pen[1]] = pen[2] * Math.abs(v[pen[1]]) * 0.3;
+    }
+    // handrails are solid bars too: the body (about 0.2 m around the camera) cannot drift through one; the rail you hold is skipped
+    const RB = 0.2 + 0.025, q = _q;
+    for (const r of this.rails) {
+      if (r === this.rail) continue;
+      this.closest(r, this.pos, q); const d = this.pos.distanceTo(q); if (d >= RB || d < 1e-6) continue;
+      const n = this.pos.clone().sub(q).divideScalar(d), vn = v.dot(n);
+      this.pos.addScaledVector(n, RB - d); if (vn < 0) { hit = Math.max(hit, -vn); v.addScaledVector(n, -vn * 1.3); }
     }
     if (hit > 0.15) {
       if (hit > this.bumpLimit && this.bumpT <= 0) { this.bumpT = 1.5; this.bumps++; sfx.wrong(); this.ctx.hud.flash(`Too fast! You hit the wall at ${hit.toFixed(1)} m/s. Push off more gently.`, 'bad'); this.onBump?.(hit); }

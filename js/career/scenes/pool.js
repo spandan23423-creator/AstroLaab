@@ -92,6 +92,11 @@ export default {
     const F = new Floater(ctx, { bounds: [-W / 2, W / 2, 0.1, H - 0.2, -D / 2, D / 2], start: [-3.2, 4.2, 4], yaw: Math.PI * 0.15, water: true, push: 0.6, hardPush: 1.2, bumpLimit: 0.9 * ctx.diff.tolerance,
       buoyancy: () => Math.max(-0.35, Math.min(0.35, net() * 0.12)), onBump: v => ctx.mistake(`Bumped into the pool or mock-up at ${v.toFixed(1)} m/s.`) });
     F.addBox([-3.1, 3.1, 0, 3.0, -5.1, -2.1]);
+    // every interactive object in the water is solid as well: the work panel, the tool bag, the safety diver and the sign post
+    F.addBox([PANEL.x - 0.52, PANEL.x + 0.52, PANEL.y - 0.37, PANEL.y + 0.37, PANEL.z - 0.05, PANEL.z + 0.1]);
+    F.addBox([1.0, 1.6, 1.32, 1.8, -2.18, -1.82]);
+    F.addBox([2.3, 2.9, 2.2, 4.0, 0.3, 0.9]);
+    F.addBox([-1.0, 1.0, 3.0, 3.6, -3.8, -3.4]);
     F.addRail([-3.4, 4.2, 4.5], [-3.4, 4.2, 3.5]);
     F.addRail([-2.6, 3.25, -2.6], [-1.4, 3.25, -2.6]);
     F.addRail([-0.6, 2.25, -1.95], [0.6, 2.25, -1.95], { label: 'Work-site handrail' });

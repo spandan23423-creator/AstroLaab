@@ -44,7 +44,7 @@ export const BUILD = [
   { id: 'frame', name: 'Assemble the frame', needs: ['frame'], at: [0, 2.8] },
   { id: 'shell', name: 'Fit and inflate the pressure shell', needs: ['shell'], at: [4.8, 0] },
   { id: 'airlock', name: 'Install the airlock', needs: ['airlock'], at: [0, 6.2] },
-  { id: 'power', name: 'Connect solar panels and battery', needs: ['solar', 'battery'], at: [-6.6, 4.4] },
+  { id: 'power', name: 'Connect solar panels and battery', needs: ['solar', 'battery'], at: [-8.6, 3.4] },
   { id: 'lights', name: 'Hang the LED grow lights', needs: [['ledBasic', 'ledEff']], at: [-1.6, 0] },
   { id: 'air', name: 'Install fans, heater and CO₂/O₂ unit', needs: ['fans', 'heater', 'co2'], at: [-4.6, -2.6] },
   { id: 'water', name: 'Install the water tank and pumps', needs: ['tank', 'pump'], at: [4.2, -2.8] },

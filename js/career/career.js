@@ -19,7 +19,7 @@ import { openCareerControls } from './ui/menus.js';
 import { openLetter } from './ui/letter.js';
 import { showIdCard } from './ui/idCard.js';
 
-const SCENES = { tutorial: () => import('./scenes/tutorial.js'), home: () => import('./scenes/home.js'), car: () => import('./scenes/car.js'), arrival: () => import('./scenes/arrival.js'), centre: () => import('./scenes/centre.js'), suit: () => import('./scenes/suit.js'), inspection: () => import('./scenes/inspection.js'), mobility: () => import('./scenes/mobility.js'), lowg: () => import('./scenes/lowg.js'), pool: () => import('./scenes/pool.js'), emergency: () => import('./scenes/emergency.js'), equipment: () => import('./scenes/equipment.js'), survival: () => import('./scenes/survival.js'), greenhouse: () => import('./scenes/greenhouse.js'), medical: () => import('./scenes/medical.js'), spacecraft: () => import('./scenes/spacecraft.js'), robotics: () => import('./scenes/robotics.js'), eva: () => import('./scenes/eva.js'), launch: () => import('./scenes/launch.js'), powerlab: () => import('./scenes/powerlab.js'), moonpower: () => import('./scenes/moonpower.js') };
+const SCENES = { tutorial: () => import('./scenes/tutorial.js'), home: () => import('./scenes/home.js'), car: () => import('./scenes/car.js'), arrival: () => import('./scenes/arrival.js'), centre: () => import('./scenes/centre.js'), suit: () => import('./scenes/suit.js'), inspection: () => import('./scenes/inspection.js'), mobility: () => import('./scenes/mobility.js'), lowg: () => import('./scenes/lowg.js'), pool: () => import('./scenes/pool.js'), emergency: () => import('./scenes/emergency.js'), equipment: () => import('./scenes/equipment.js'), survival: () => import('./scenes/survival.js'), greenhouse: () => import('./scenes/greenhouse.js'), medical: () => import('./scenes/medical.js'), spacecraft: () => import('./scenes/spacecraft.js'), eva: () => import('./scenes/eva.js'), launch: () => import('./scenes/launch.js'), powerlab: () => import('./scenes/powerlab.js'), moonpower: () => import('./scenes/moonpower.js') };
 export const SCENE_IDS = Object.keys(SCENES);
 let app = null, run = null;
 export function initCareer(a) {
@@ -49,6 +49,7 @@ async function gotoScene(id, opts = {}) {
 
 export async function startCareerScene(id, { mode = 'story', resume = false, fromTransition = false } = {}) {
   if (run) return;
+  if (!SCENES[id]) { id = 'centre'; resume = false; } // a save from an older build may point at a removed area (robotic arm)
   if (!fromTransition) await fade(true, 250);
   const test = document.createElement('canvas');
   if (!(test.getContext('webgl2') || test.getContext('webgl'))) { fade(false, 0); openModal({ title: '3D unavailable', body: '<p>Career Mode needs WebGL. Try updating your browser or turning on hardware acceleration.</p>' }); return; }

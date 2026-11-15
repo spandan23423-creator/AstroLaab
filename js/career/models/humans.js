@@ -112,6 +112,8 @@ export function makePerson(look = {}) {
   }
   root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   head.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } }); // small face parts look blotchy with self-shadowing
+  // stand exactly on the floor: the shoe soles used to sit about 2 cm below it, so every built-in NPC sank into the ground
+  { root.updateMatrixWorld(true); const bb = new THREE.Box3(), part = new THREE.Box3(); root.traverse(o => { if (o.isMesh) bb.union(part.setFromObject(o, true)); }); if (bb.min.y < 0 && bb.min.y > -0.1) body.position.y -= bb.min.y; }
   const rig = { root, body, spine, neck, head, legs, arms, eyes, lids, mouth, lower, t: Math.random() * 10, talk: 0, wave: 0, give: 0, giveTarget: 0, sit: 0, sitTarget: 0, lookTarget: null, hold: null,
     walk: 0, walkTarget: 0, walkPh: 0, ground: 0, groundTarget: 0, mask: null, cough: 0, holdHead: 0, holdHeadTarget: 0 };
   root.userData.rig = rig;

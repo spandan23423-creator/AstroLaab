@@ -47,7 +47,8 @@ export default {
     if (state.settings) for (const [id, on, p] of state.settings) { const l = sim.load(id); if (l) { l.on = on; l.priority = p; } }
     const saveSettings = () => { state.settings = sim.loads.map(l => [l.id, l.on, l.priority]); ctx.save(); };
     // --- solar test stand under a sun lamp
-    const panels = [-4.2, -2.4].map(x => { const p = makeSolarPanel(); p.position.set(x, 0, -2.6); scene.add(p); ctx.player.addBox(x - 0.4, x + 0.4, -3.0, -2.2, 0, 1.6); return p; });
+    // the sun lamp is overhead, so the panels tilt back to face up at it (they used to stand nearly upright, edge-on to the lamp)
+    const panels = [-4.2, -2.4].map(x => { const p = makeSolarPanel({ tilt: 1.15 }); p.position.set(x, 0, -2.6); scene.add(p); ctx.player.addBox(x - 0.4, x + 0.4, -3.0, -2.2, 0, 1.6); return p; });
     const lampMat = MAT.glow(0xfff2c8, 2.2); const lamp = box(3.0, 0.08, 1.4, lampMat, -3.3, 3.5, -2.6, scene);
     const lampLight = new THREE.SpotLight(0xfff2d8, 40, 6, 0.9, 0.5, 1.2); lampLight.position.set(-3.3, 3.4, -2.6); lampLight.target.position.set(-3.3, 0, -2.6); scene.add(lampLight, lampLight.target);
     const lampSign = makeSign('SUN LAMP', '100% = full sunlight', 1.2, '#7a5a10'); lampSign.position.set(-3.3, 3.0, -1.88); scene.add(lampSign);

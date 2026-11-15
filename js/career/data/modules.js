@@ -18,8 +18,7 @@ export const MODULES = [
   { id: 'spacecraft', icon: '🎛️', name: 'Spacecraft Systems', desc: 'Run power, oxygen, pressure, temperature and comms, and diagnose faults.', scene: 'spacecraft', after: ['greenhouse', 'medical'] },
   { id: 'powerlab', icon: '🔋', name: 'Power & Life Support Lab', desc: 'Wire a habitat power system, replace a blown fuse safely and keep life support alive through a 3-hour shadow. Certifies you on the lunar outpost\'s power kit.', scene: 'powerlab', after: ['spacecraft'] },
   { id: 'moonpower', icon: '🌒', name: 'Mission: Lunar Outpost Power', desc: 'On the Moon\'s south pole: unfold and aim four solar panels, wire the outpost, and keep the crew safe through a crater-rim shadow.', scene: 'moonpower', after: ['powerlab'] },
-  { id: 'robotics', icon: '🦾', name: 'Robotic Arm', desc: 'Drive each joint to capture a floating cargo module and berth it.', scene: 'robotics', after: ['spacecraft'] },
-  { id: 'eva', icon: '🛰️', name: 'EVA / Spacewalk', desc: 'Suit up, depressurise the airlock, move by handrails and repair a station antenna.', scene: 'eva', after: ['robotics'] },
+  { id: 'eva', icon: '🛰️', name: 'EVA / Spacewalk', desc: 'Suit up, depressurise the airlock, move by handrails and repair a station antenna.', scene: 'eva', after: ['spacecraft'] },
   { id: 'launch', icon: '🚀', name: 'Launch & Flight', desc: 'Final checks, countdown, liftoff, ascent and your first orbit.', scene: 'launch', after: ['eva'] }
 ];
 export const MODULE_MAP = Object.fromEntries(MODULES.map(m => [m.id, m]));

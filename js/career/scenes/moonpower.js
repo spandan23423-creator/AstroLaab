@@ -64,7 +64,10 @@ export default {
     const batt = makeBatteryRack(); batt.position.set(6.4, 0, -2.6); scene.add(batt); player.addBox(5.9, 6.9, -3.0, -2.2, 0, 1.6);
     const bus = makeBusBoard(LOADS, Object.fromEntries(LOADS.map(id => [id, LOAD_TYPES[id].name]))); const bpost = new THREE.Group(); box(0.15, 2.2, 0.15, MAT.metal(0x8a8f99), 0, 1.1, -0.15, bpost); bus.position.set(0, 1.5, 0); bpost.add(bus); bpost.position.set(3.0, 0, -6.6); scene.add(bpost); player.addBox(2.3, 3.7, -6.9, -6.3, 0, 2.4);
     const term = makeTerminal(infoScreen('OUTPOST POWER', ['Same panel as the Power Lab', ['Plan for the crater-rim shadow', '#ffc857']])); term.position.set(3.6, 0, -1.2); term.rotation.y = -0.4; scene.add(term); player.addBox(3.35, 3.85, -1.45, -0.95, 0, 1.4);
-    const radio = new THREE.Group(); box(0.35, 0.5, 0.25, std(0x2a2d33), 0, 1.0, 0, radio); cyl(0.01, 0.01, 0.6, MAT.metal(0xb0b4b8), 0.12, 1.5, 0, radio, 6); box(0.08, 1.0, 0.08, MAT.metal(0x8a8f99), 0, 0.5, 0, radio); const rs = makeSign('RADIO', 'Mission Control', 0.5, '#2a3550'); rs.position.set(0, 1.38, 0.13); radio.add(rs); radio.position.set(1.8, 0, -1.4); scene.add(radio);
+    const radio = new THREE.Group(); box(0.35, 0.5, 0.25, std(0x2a2d33), 0, 1.0, 0, radio); cyl(0.01, 0.01, 0.6, MAT.metal(0xb0b4b8), 0.12, 1.5, 0, radio, 6); box(0.08, 1.0, 0.08, MAT.metal(0x8a8f99), 0, 0.5, 0, radio); const rs = makeSign('RADIO', 'Mission Control', 0.5, '#2a3550'); rs.position.set(0, 1.38, 0.13); radio.add(rs); radio.position.set(1.8, 0, -1.4); scene.add(radio); player.addBox(1.6, 2.0, -1.6, -1.2, 0, 1.6);
+    // generous invisible hit boxes, so the thin radio mast, the lander and the panel post are easy to aim at
+    const hitBox = (obj, w, hh, d, y) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, hh, d), new THREE.MeshBasicMaterial({ visible: false })); m.position.y = y; m.userData.hitbox = true; obj.add(m); return m; };
+    hitBox(radio, 0.5, 1.8, 0.4, 0.9); hitBox(lm, 4.2, 5.2, 4.2, 2.6); hitBox(term, 0.7, 1.5, 0.5, 0.75);
     const field = makeSign('SOLAR FIELD', 'Panels face the Sun, low in the east', 2.2, '#7a5a10'); field.position.set(10.2, 1.6, -9.0); scene.add(field);
     // --- simulation
     const sim = new Outpost({ crew: 4, loads: LOADS, panels: PANELS.map((_, i) => ({ id: 'P' + (i + 1), peakKW: 2.5, deployed: state.deployed[i], connected: false })), battery: { capKWh: 30, socPct: 60 }, sunlit: true, ambientC: -30 });
@@ -113,7 +116,14 @@ export default {
     if (ctx.isDone('wire') && !ctx.isDone('shadow')) countdown.t = 90;
     const panel = () => openPowerPanel(sim, { title: '⚡ Outpost power and life support', sub: 'Crew of 4 inside. In shadow only the 30 kWh battery powers the habitat.', canEdit: true, onChange: saveSettings, review: () => powerRefresher() });
     makeUsable(term, { label: 'Outpost power panel', verb: 'Open the', enabled: () => ctx.isDone('brief'), use: () => { ctx.input.releaseLock?.(); panel(); } }); ix.add(term);
-    makeUsable(radio, { label: 'Radio', verb: 'Call Mission Control on the', enabled: () => ctx.isDone('shadow') && !ctx.isDone('report'), use: async () => {
+    // the lander: look it over any time (it is the crew's ride home and the outpost's emergency shelter)
+    makeUsable(lm, { label: 'Lunar lander', verb: 'Inspect the', range: 4.5, use: () => ctx.talk([{ who: CAPCOM, text: ctx.isDone('report') ? 'That lander is your ride home, outpost. Ascent stage is fuelled and healthy.' : 'That\'s the crew lander: your ride home and the shelter if the habitat ever loses pressure. It has its own batteries, so it can\'t power the outpost. Focus on the solar field.' }]) }); ix.add(lm);
+    makeUsable(radio, { label: 'Radio', verb: 'Call Mission Control on the', enabled: () => ctx.isDone('brief') && !test.running && (!ctx.isDone('shadow') || !ctx.isDone('report')), use: async () => {
+      if (!ctx.isDone('shadow')) { // before the shadow: a status check, so the radio always answers
+        const st = wiring.status();
+        await ctx.talk([{ who: 'You', text: 'Houston, outpost. Radio check.' }, { who: CAPCOM, text: !state.deployed.every(Boolean) ? 'Loud and clear, outpost. Unfold all four panels in the solar field first.' : !ctx.isDone('aim') ? 'Loud and clear. Turn each panel until it faces the low Sun.' : !st.complete ? 'Loud and clear. Wire the field to the pallet: panels to PV IN, BATT to the battery, LOAD to the habitat bus.' : 'Loud and clear. Grid looks good from here. Get the habitat ready on the power panel before the shadow.' }]);
+        return;
+      }
       await ctx.talk([{ who: 'You', text: 'Houston, outpost. We\'re through the shadow. Life support stayed up the whole time, and the panels are charging again.' },
         { who: CAPCOM, text: `Copy that, outpost. Lowest battery ${Math.round(test.result?.minSoc ?? 0)}%. That's textbook. Power is the root of everything up there, and you just proved you can run it.` }]);
       ctx.done('report'); finish();

@@ -189,12 +189,6 @@ body.touch:not(.force-kbm) .career-screen .cx-lockhint { display: none; }
 .colorblind .cx-tag.good { color: #5aa8ff; }
 .cx-vitals { font-family: ui-monospace, monospace; font-size: 1.05rem; line-height: 1.6; }
 @media (max-width: 720px) { .cx-brain { grid-template-columns: 1fr; } .cx-brain-cv { height: 260px; } }
-/* Phase 7: robotic arm controls */
-.cx-arm { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 4; padding: 8px 10px; border-radius: 14px; display: flex; flex-direction: column; gap: 6px; max-width: calc(100vw - 24px); }
-.cx-arm-j, .cx-arm-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
-.cx-arm-row .btn { min-width: 48px; touch-action: none; }
-.cx-estop { background: #b3202a !important; color: #fff !important; font-weight: 700; } .cx-estop.on { box-shadow: 0 0 0 3px #ffc857; }
-#screen-career:has(.cx-arm) .cx-joy, #screen-career:has(.cx-arm) .cx-buttons { display: none !important; }
 /* Phase 8: orbit operations */
 .cx-ops-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
 .cx-ops-g { padding: 8px; border-radius: 10px; background: rgba(255,255,255,.05); border: 1px solid transparent; }
@@ -207,26 +201,21 @@ body.touch:not(.force-kbm) .career-screen .cx-lockhint { display: none; }
 /* Emergency drill: oxygen-mask view (dark rim, never blocks clicks) */
 #screen-career.cx-masked::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 2; background: radial-gradient(ellipse 70% 62% at 50% 50%, transparent 62%, rgba(0,0,0,.55) 100%); }
 /* Phase 9: bigger touch targets on phones and tablets */
-body.touch .cx-arm button, body.touch .cx-brain-list .btn, body.touch .cx-ops-acts .btn, body.touch .cx-gh-fault .btn { min-height: 44px; }
+body.touch .cx-brain-list .btn, body.touch .cx-ops-acts .btn, body.touch .cx-gh-fault .btn { min-height: 44px; }
 @media (max-width: 720px) {
   .cx-timer { top: 124px; left: auto; right: 8px; transform: none; font-size: .9rem; }
-  .cx-arm { left: 8px; right: 8px; transform: none; max-width: none; bottom: 8px; padding: 6px; }
-  .cx-arm-j { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .cx-arm-j .btn, .cx-arm-row .btn { padding-left: 6px; padding-right: 6px; font-size: .85rem; }
-  .cx-arm-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  #screen-career:has(.cx-arm) .cx-readout { bottom: 240px; }
 }
 
 /* ---------- Screen-space UI layering convention (see docs/RENDER-LAYERS.md) ----------
    One z-index band per kind of element inside the career screen, so panels never cover the wrong thing:
    0 canvas · 2 crosshair, prompt, focus hints · 3 HUD panels (objectives, timer, readout, meters, item buttons)
-   4 alerts and controls (flash, touch controls, robot-arm panel, skip) · 5 conversation · 6 full-screen effects
+   4 alerts and controls (flash, touch controls, skip) · 5 conversation · 6 full-screen effects
    Modals (40), toasts (70) and the fade (60) live above the whole screen in style.css. */
 .career-screen { --z-canvas: 0; --z-aim: 2; --z-hud: 3; --z-alert: 4; --z-talk: 5; --z-fx: 6; }
 .cx-canvas { z-index: var(--z-canvas); }
 .cx-cross, .cx-prompt, .cx-lockhint { z-index: var(--z-aim); }
 .cx-obj, .cx-top, .cx-caption, .cx-timer, .cx-readout, .cx-item-btn, .cx-trim-btn, .cx-meters { z-index: var(--z-hud); }
-.cx-flash, .cx-arm, .cx-skipcine, body.touch:not(.force-kbm) .cx-joy, body.touch:not(.force-kbm) .cx-buttons { z-index: var(--z-alert); }
+.cx-flash, .cx-skipcine, body.touch:not(.force-kbm) .cx-joy, body.touch:not(.force-kbm) .cx-buttons { z-index: var(--z-alert); }
 .cx-dlg { z-index: var(--z-talk); }
 #screen-career.cx-masked::after, .cx-screenfx { z-index: var(--z-fx); }
 /* the readout sits under the top-right buttons and never under the item buttons */
@@ -265,12 +254,6 @@ body.touch:not(.force-kbm) .cx-meters { bottom: 170px; }
 .cx-eyetest .prog i.ok { background: var(--good, #3fe0a0); } .cx-eyetest .prog i.no { background: var(--bad, #ff6a6a); } .cx-eyetest .prog i.cur { outline: 2px solid var(--cyan, #5ad8ff); }
 .cx-eyetest .fb { min-height: 1.4em; font-weight: 700; }
 .cx-eyetest .fb.good { color: var(--good, #3fe0a0); } .cx-eyetest .fb.bad { color: var(--bad, #ff6a6a); }
-/* Robot arm view label */
-.cx-viewtag { position: absolute; left: 50%; top: 56px; transform: translateX(-50%); padding: 4px 12px; border-radius: 8px; background: rgba(0,0,0,.55); font-size: .85rem; z-index: var(--z-hud); pointer-events: none; }
-.cx-arm .cx-arm-views { display: flex; flex-wrap: wrap; gap: 4px; }
-.cx-arm .cx-arm-views .btn { min-height: 30px; padding: 4px 8px; font-size: .8rem; }
-.cx-jbar { position: relative; height: 6px; border-radius: 3px; background: rgba(255,255,255,.15); margin-top: 3px; }
-.cx-jbar i { position: absolute; top: -3px; width: 4px; height: 12px; border-radius: 2px; background: var(--cyan, #5ad8ff); }
 .cx-eyetest .opts .btn.ok { box-shadow: 0 0 0 2px var(--good, #3fe0a0) inset; }
 .cx-eyetest canvas { border-radius: 6px; }
 
@@ -297,3 +280,9 @@ body.touch:not(.force-kbm) .cx-meters { bottom: 170px; }
 .cx-pw-alarm.warning { border-color: var(--warn); color: var(--warn); }
 .cx-pw-alarm.ok { color: #3fe0a0; }
 @media (max-width: 560px) { .cx-pw-row { grid-template-columns: 1.4fr .8fr .8fr; } .cx-pw-row > span:nth-child(2), .cx-pw-row > span:nth-child(5) { display: none; } .cx-pw-batt { grid-column: auto; } }
+/* Equipment inspection checklist and log: one aligned row per line (label column + value), readable at every width */
+.cx-checklist { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 6px; }
+.cx-checklist li { padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,.05); }
+.cx-checklist li:has(> b:first-child) { display: grid; grid-template-columns: minmax(110px, 38%) 1fr; gap: 10px; align-items: baseline; }
+.cx-checklist li b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 480px) { .cx-checklist li:has(> b:first-child) { grid-template-columns: 1fr; gap: 2px; } .cx-checklist li b { white-space: normal; } }

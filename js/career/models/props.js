@@ -71,6 +71,6 @@ export function makeLocker(col = 0x3e5c8a) {
 export function makeCeilingLight(w = 1.2, d = 0.3) {
   const g = new THREE.Group();
   const housing = new THREE.Mesh(new THREE.BoxGeometry(w + 0.06, 0.05, d + 0.06), MAT.metal(0xb0b6c2)); g.add(housing);
-  const panel = new THREE.Mesh(new THREE.PlaneGeometry(w, d), MAT.glow(0xfff6e6, 2.2)); panel.rotation.x = Math.PI / 2; panel.position.y = -0.026; g.add(panel);
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(w, d), MAT.glow(0xfff6e6, 2.2)); panel.rotation.x = Math.PI / 2; panel.position.y = -0.034; panel.material.polygonOffset = true; panel.material.polygonOffsetFactor = -1; panel.material.polygonOffsetUnits = -4; g.add(panel); /* clear of the housing's underside: at 1 mm apart the two flickered (z-fighting) in every room */
   return g;
 }

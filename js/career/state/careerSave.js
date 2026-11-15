@@ -1,5 +1,5 @@
 // ASTRO LAB Career — the `career` section of the shared save (astrolab.save.v1).
-// XP, badges, cards and the logbook stay shared with Free Explore.
+// XP and badges are shared with the Lunar Mission.
 import { progress, save, log } from '../../systems/core.js';
 
 export const CAREER_VERSION = 1;

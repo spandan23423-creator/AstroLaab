@@ -216,42 +216,9 @@ export class Terrain {
 export function makePainter(site) {
   const P = site.paint, base = COLORS[P.base], alt = COLORS[P.alt], ej = COLORS[P.ejecta || P.alt], sl = P.slopeLight ? COLORS[P.slopeLight] : null;
   const s = site.seed;
-  const streaks = site.streaks || [];
   return (x, z, y, slope, ejecta, blk) => {
     const n1 = fbm2(x / 180, z / 180, s + 1, 3), n2 = fbm2(x / 14, z / 14, s + 2, 2);
     let c = mix(base, alt, n1 * 0.9 - 0.1 + (n2 - 0.5) * 0.3);
-    switch (P.special) {
-      case 'io': {
-        const p = fbm2(x / 90, z / 90, s + 5, 3), q = fbm2(x / 40, z / 40, s + 9, 3);
-        c = mix(COLORS.ioYellow, COLORS.ioWhite, smooth(0.45, 0.65, p));
-        c = mix(c, COLORS.ioOrange, smooth(0.55, 0.75, q) * 0.8);
-        if (x < -150) c = mix(c, COLORS.ioRed, smooth(0.5, 0.7, fbm2(x / 50, z / 50, s + 3, 3)) * smooth(-150, -260, x));
-        c = mix(c, COLORS.ioBlack, smooth(-330, -390, x));
-        break;
-      }
-      case 'europa': {
-        c = mix(COLORS.euIce, COLORS.euTan, n1 * 0.35 + (n2 - 0.5) * 0.15);
-        const f = Math.abs(fbm2(x / 70, z / 70, s + 4, 4) - 0.5); const line = smooth(0.035, 0.0, f);
-        c = mix(c, COLORS.euBrown, line * 0.85);
-        c = mix(c, COLORS.euTan, (1 - blk) * smooth(0.45, 0.7, n1) * 0.6 * (z > -380 ? 1 : 0.3));
-        c = mix(c, COLORS.euIce, smooth(15, 35, slope) * 0.6);
-        break;
-      }
-      case 'ganymede': c = mix(c, COLORS.gaDark, smooth(-10, -40, y) * 0.6); break;
-      case 'callisto': c = mix(COLORS.caDark, COLORS.gaDark, n2 * 0.6); c = mix(c, COLORS.caIce, Math.max(smooth(8, 40, y) * blk, smooth(18, 35, slope) * 0.7)); break;
-      case 'titan': c = mix(COLORS.tiDark, COLORS.tiSand, n1 * 1.2); c = mix(c, COLORS.tiPebble, smooth(0.55, 0.75, n2) * 0.7); c = mix(c, [0.62, 0.52, 0.4], smooth(30, 110, y)); break;
-      case 'enceladus': c = mix(COLORS.enSnow, COLORS.enBlue, smooth(12, 35, slope) * 0.9 + smooth(-50, -300, y) * 0.4); break;
-      case 'triton': {
-        c = mix(COLORS.trPink, COLORS.trWhite, n1);
-        for (const k of streaks) {
-          const a = k.angle * DEG, dx = x - k.x, dz = z - k.z; const al = dx * Math.sin(a) - dz * Math.cos(a), ac = dx * Math.cos(a) + dz * Math.sin(a);
-          if (al > -20 && al < k.len) { const w = 20 + al * 0.18; c = mix(c, COLORS.trDark, Math.exp(-((ac / w) ** 2)) * (1 - al / k.len) * 0.9); }
-        }
-        break;
-      }
-      case 'charon': c = mix(c, COLORS.chDark, smooth(-30, -300, y) * 0.7); break;
-      case 'phobos': c = mix(COLORS.phDark, COLORS.phLight, smooth(10, 25, slope) * 0.8 + (n2 - 0.5) * 0.3); break;
-    }
     if (ejecta > 0) c = mix(c, ej, ejecta * 0.75);
     if (sl) c = mix(c, sl, smooth(14, 30, slope) * 0.6);
     return c;

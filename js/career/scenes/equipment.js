@@ -41,7 +41,7 @@ export default {
     // cargo bag (open) with the items on a table
     const tbl = new THREE.Group(); box(2.4, 0.06, 0.9, std(0xe8ebf0), 0, 0.9, 0, tbl); for (const [x, z] of [[-1.1, -0.38], [1.1, -0.38], [-1.1, 0.38], [1.1, 0.38]]) box(0.05, 0.88, 0.05, MAT.metal(), x, 0.44, z, tbl); tbl.position.set(0, 0, 0.6); scene.add(tbl); player.addBox(-1.25, 1.25, 0.1, 1.1, 0, 1);
     const cargo = new THREE.Group(); box(0.8, 0.4, 0.6, std(0xf2f2f2, { roughness: 0.95 }), 0, 0.2, 0, cargo); cargo.position.set(-1.5, 0, 2.0); scene.add(cargo); player.addBox(-1.9, -1.1, 1.7, 2.3, 0, 0.5);
-    const cs = makeSign('CARGO', 'Unpack me', 0.9); cs.position.set(-1.5, 0.75, 2.31); scene.add(cs);
+    const cs = makeSign('CARGO', 'Unpack me', 0.72); cs.position.set(-1.5, 0.2, 2.305); scene.add(cs); // on the bag's front face (it used to float in mid-air in front of it)
     const objs = ITEMS.map(([id, name, cat, col, [w, hh, d]], i) => {
       const o = new THREE.Group(); box(w, hh, d, std(col, { roughness: 0.6 }), 0, hh / 2, 0, o); box(Math.min(w, 0.1), 0.012, 0.05, std(0xffffff), 0, hh + 0.006, 0, o);
       o.traverse(m => { if (m.isMesh) m.castShadow = true; }); o.position.set(-1.0 + (i % 4) * 0.66, 0.93, 0.35 + Math.floor(i / 4) * 0.45); scene.add(o);
@@ -74,7 +74,7 @@ export default {
       ctx.done('find'); hud.flash('Next: pack the spacewalk tool bag on the bench.', '', 3500);
     } }); ix.add(term);
     // EVA tool bag on a bench
-    const bag = new THREE.Group(); box(0.55, 0.32, 0.3, std(0xf2f2f2, { roughness: 0.95 }), 0, 0.16, 0, bag); box(0.57, 0.04, 0.32, std(0x2b6ad8), 0, 0.3, 0, bag); bag.position.set(-4.8, 0.93, 1.6); scene.add(bag);
+    const bag = new THREE.Group(); box(0.55, 0.3, 0.3, std(0xf2f2f2, { roughness: 0.95 }), 0, 0.15, 0, bag); box(0.57, 0.05, 0.32, std(0x2b6ad8), 0, 0.325, 0, bag); bag.position.set(-4.8, 0.93, 1.6); scene.add(bag); // lid sits on top of the body (they used to share a top face and flicker)
     const bench = new THREE.Group(); box(1.2, 0.06, 0.7, std(0xe8ebf0), 0, 0.9, 0, bench); box(1.1, 0.86, 0.6, std(0xc0c4cc), 0, 0.44, 0, bench); bench.position.set(-4.8, 0, 1.6); scene.add(bench); player.addBox(-5.4, -4.2, 1.25, 1.95, 0, 1);
     const bs = makeSign('EVA TOOL BAG', `Max ${limit} kg`, 1.1); bs.position.set(-5.96, 1.9, 1.6); bs.rotation.y = Math.PI / 2; scene.add(bs);
     makeUsable(bag, { label: 'Spacewalk tool bag', verb: 'Pack', range: 2.4, enabled: () => ctx.isDone('find') && !ctx.isDone('pack'), use: () => {

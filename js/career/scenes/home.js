@@ -236,7 +236,7 @@ export default {
     // ---------- Waking up ----------
     let named = !!career().player.name, alarmT = 0, wakeT = 0, standing = null;
     const inBed = () => !ctx.isDone('getup');
-    if (inBed()) player.seat = { pos: BED_EYE.clone(), yaw: -Math.PI / 2, yawRange: 1.25, pitchMin: -0.45, pitchMax: 1.35, roll: 0 };
+    if (inBed()) player.seat = { pos: BED_EYE.clone(), yaw: -Math.PI / 2, yawRange: 1.9, pitchMin: -0.6, pitchMax: 1.4, roll: 0 };
     function alarmOff() { if (ctx.isDone('alarm')) return; sfx.ui(); hud.cap('[Click. The alarm stops.]'); ctx.done('alarm'); hud.flash(ctx.input.touch ? 'Tap ✋ to get out of bed.' : 'Press E to get out of bed.', '', 3500); }
     function getUp() {
       if (standing || !inBed()) return;

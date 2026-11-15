@@ -58,7 +58,7 @@ export default {
     const good = makeBin(0x2e8a4a, 'SERVICEABLE'), bad = makeBin(0xc8202a, 'UNSERVICEABLE');
     good.position.set(4.2, 0, -1.4); bad.position.set(4.2, 0, 0.6); scene.add(good, bad); player.addBox(3.9, 4.5, -1.65, -1.15, 0, 0.7); player.addBox(3.9, 4.5, 0.35, 0.85, 0, 0.7);
     for (const [b, t, c] of [[good, 'SERVICEABLE', '#1f6b3a'], [bad, 'UNSERVICEABLE', '#8a1f24']]) { const s = makeSign(t, '', 1.1, c); s.position.set(5.46, 1.5, b.position.z); s.rotation.y = -Math.PI / 2; scene.add(s); }
-    const logBook = new THREE.Group(); box(0.32, 0.03, 0.42, std(0x22406f), 0, 0, 0, logBook); box(0.3, 0.005, 0.4, std(0xf6f2e6), 0, 0.018, 0, logBook); logBook.position.set(-3.6, 0.95, -3.3); scene.add(logBook);
+    const logBook = new THREE.Group(); box(0.32, 0.03, 0.42, std(0x22406f), 0, 0, 0, logBook); box(0.3, 0.005, 0.4, std(0xf6f2e6), 0, 0.018, 0, logBook); logBook.position.set(-3.84, 0.95, -3.4); /* at the left end of the bench, clear of item 1 (they used to overlap) */ scene.add(logBook);
     const tech = instructor(ctx, LOOKS.tech, 'Inspector Rivera', [-1, -1.6, Math.PI * 0.8], () => ctx.isDone('brief') ? [{ who: 'Inspector Rivera', text: !ctx.isDone('check') ? 'Put an item on the green mat, read every line, then decide. Numbers matter: compare each reading with the limit.' : 'Sign the log book at the end of the bench.' }] : [
       { who: 'Inspector Rivera', text: 'Welcome back, {name}. Before any spacewalk, every tool and every piece of safety gear is checked. One bad tether or an empty oxygen bottle can end a mission.' },
       { who: 'Inspector Rivera', text: 'Six items are on the bench. Put each one on the inspection mat and work through its checklist. If anything is outside the limits, tag it UNSERVICEABLE. If it all checks out, tag it SERVICEABLE.' },
@@ -68,7 +68,7 @@ export default {
     const tagged = id => state.verdicts[id] != null;
     ORDER.forEach((id, i) => {
       const o = shadow(ITEMS[id].build()); o.userData.iid = id; objs[id] = o;
-      o.position.set(-3.6 + i * 0.66, 0.93 + ITEMS[id].y, -3.4); scene.add(o);
+      o.position.set(-3.3 + i * 0.6, 0.93 + ITEMS[id].y, -3.4); /* six evenly spaced slots between the log book and the bench end */ scene.add(o);
       carry.makeCarriable(o, { id, name: ITEMS[id].name });
     });
     const binPos = v => v === 'ok' ? new THREE.Vector3(4.2 + (Math.random() - 0.5) * 0.25, 0.62, -1.4 + (Math.random() - 0.5) * 0.2) : new THREE.Vector3(4.2 + (Math.random() - 0.5) * 0.25, 0.62, 0.6 + (Math.random() - 0.5) * 0.2);

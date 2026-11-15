@@ -81,10 +81,14 @@ export default {
     const idSign = makeSign('ID KIOSK', 'Astronaut ID & badge', 1.6); idSign.position.set(X0 + 0.02, 2.6, -6.8); idSign.rotation.y = Math.PI / 2; scene.add(idSign);
     const dashSign = makeSign('TRAINING DASHBOARD', 'Start your modules here', 2.6); dashSign.position.set(X1 - 0.02, 3.0, -5); dashSign.rotation.y = -Math.PI / 2; scene.add(dashSign);
     const briefSign = makeSign('BRIEFING ROOM', 'Rules · agreement', 1.8); briefSign.position.set(2.2, 2.9, -9.92); scene.add(briefSign);
-    for (const [z, t, sub] of [[1.5, 'TRAINING HALL', 'Suits · pool · mobility'], [-1.5, 'SPACECRAFT LAB', 'Cockpit · robotics · EVA']]) { const d = makeSlidingDoor(1.4, 2.4, t.split(' ')[0]); d.position.set(X1 - 0.09, 0, z); d.rotation.y = -Math.PI / 2; scene.add(d); const s = makeSign(t, sub, 1.4); s.position.set(X1 - 0.02, 3.0, z); s.rotation.y = -Math.PI / 2; scene.add(s); }
+    for (const [z, t, sub] of [[1.5, 'TRAINING HALL', 'Suits · pool · mobility'], [-1.5, 'SPACECRAFT LAB', 'Cockpit · power · EVA']]) { const d = makeSlidingDoor(1.4, 2.4, t.split(' ')[0]); d.position.set(X1 - 0.09, 0, z); d.rotation.y = -Math.PI / 2; scene.add(d); const s = makeSign(t, sub, 1.4); s.position.set(X1 - 0.02, 3.0, z); s.rotation.y = -Math.PI / 2; scene.add(s); }
     { const d = makeSlidingDoor(1.4, 2.4, 'LAB'); d.position.set(X0 + 0.09, 0, 1.5); d.rotation.y = Math.PI / 2; scene.add(d); const s = makeSign('LIFE SCIENCES', 'Greenhouse · medical', 1.4); s.position.set(X0 + 0.02, 3.0, 1.5); s.rotation.y = Math.PI / 2; scene.add(s); }
     for (const [x, z] of [[-11.3, 3.3], [11.3, 3.3], [-11.3, -9.3], [3.5, -9.3]]) { const p = H.makePlant(1.6); p.position.set(x, 0, z); scene.add(p); player.addBox(x - 0.3, x + 0.3, z - 0.3, z + 0.3, 0, 1.2); }
-    const sat = makeSatelliteModel(); sat.position.set(3, 3.3, -5); scene.add(sat);
+    // model satellite on a display stand in the lobby (it used to hang in mid-air with its thin panels edge-on to the player)
+    const satStand = new THREE.Group(); H.box(1.4, 0.12, 1.0, MAT.metal(0x5a6070), 0, 0.06, 0, satStand); H.cyl(0.07, 0.09, 1.3, MAT.metal(0x8a8f99), 0, 0.77, 0, satStand, 12);
+    const sat = makeSatelliteModel(); sat.scale.setScalar(0.62); sat.position.set(0, 1.42 + 0.25, 0); sat.rotation.set(0.18, -0.5, 0); satStand.add(sat);
+    satStand.position.set(5.6, 0, -5.4); scene.add(satStand); player.addBox(4.9, 6.3, -5.9, -4.9, 0, 2.2);
+    const satSign = makeSign('MODEL SATELLITE', 'Solar arrays · comms dish', 1.2); satSign.position.set(0, 0.62, 0.52); satSign.rotation.x = -0.5; satSign.scale.setScalar(0.5); satStand.add(satSign);
     // notice board (imported model; its pinned side faces -x in the file) on the back wall of the lobby
     whenModel('bulletin', gltf => { const nb = markImported(fit(instance(gltf), { size: 1.6, by: 'x', rotY: Math.PI / 2, ground: false })); nb.position.set(7.2, 1.55, -9.9); scene.add(nb); });
     const benches = makeChairRow(4, 0x3a5a8a); benches.position.set(-8, 0, 3.3); benches.rotation.y = Math.PI; scene.add(benches); player.addBox(-9.3, -6.7, 3, 3.6, 0, 1);

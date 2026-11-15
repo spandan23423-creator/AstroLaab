@@ -63,7 +63,9 @@ export default {
     F.addRail([0.5, 2.25, -3.2], [0.5, 2.25, -3.9]);
     for (let x = 1.5; x <= 12; x += 2.5) F.addRail([x, 1.85, -3.6], [x + 1.2, 1.85, -3.6]);
     F.addRail([11.8, 2.45, -3.6], [12.9, 2.45, -3.6], { label: 'Work-site handrail' });
-    const outside = () => { F.bounds = [-3, 15, -2, 6, -8, 2.2]; F.boxes = [[-0.1, 14.1, 0.65, 1.75, -4.75, -3.65]]; };
+    // outside, every structure is solid: the truss, the airlock module you came out of, the antenna mast and dish, the
+    // work-site mount plate and the tool bag (before, only the truss was, so you could drift through the rest)
+    const outside = () => { F.bounds = [-3, 15, -2, 6, -8, 2.2]; F.boxes = [[-0.1, 14.1, 0.65, 1.75, -4.75, -3.65], [-1.55, 1.55, -0.35, 2.75, -1.5, 2.2], [12.3, 12.5, 1.7, 2.95, -4.3, -4.1], [11.7, 13.1, 2.75, 3.35, -4.9, -3.5], [12.1, 12.7, 1.8, 2.2, -3.68, -3.58], [11.4, 11.8, 1.6, 1.9, -3.73, -3.47]]; };
     if (state.seq >= 5) outside();
     // tether anchors (clip to the next one before you drift too far)
     const anchors = ANCHORS.map((p, i) => { const g = new THREE.Group(); const r = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.02, 6, 16), MAT.glow(0xffc857, 0.8)); g.add(r); g.add(new THREE.Mesh(new THREE.SphereGeometry(0.15, 6, 4), new THREE.MeshBasicMaterial({ visible: false }))); g.position.set(...p); scene.add(g);

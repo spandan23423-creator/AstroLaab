@@ -32,8 +32,9 @@ export class Input {
       if (this.pointerLocked()) { if (Math.abs(e.movementX) > 350 || Math.abs(e.movementY) > 350) return; /* ignore browser spikes */ this.look.x += e.movementX; this.look.y += e.movementY; this.lastDevice = 'kbm'; }
       else if (this.dragging === 'mouse') { this.look.x += e.movementX; this.look.y += e.movementY; }
     });
-    on(canvas, 'mousedown', e => { if (!this.pointerLocked() && e.button === 0 && !this.touch) this.dragging = 'mouse'; if (e.button === 0 && this.pointerLocked()) { if (!this.keys.has('Mouse0')) this.pressed.add('Mouse0'); this.keys.add('Mouse0'); } });
-    on(window, 'mouseup', e => { if (this.dragging === 'mouse') this.dragging = null; if (e.button === 0) this.keys.delete('Mouse0'); });
+    on(canvas, 'mousedown', e => { if (!this.pointerLocked() && (e.button === 0 || e.button === 2) && !this.touch) this.dragging = 'mouse'; /* left or right drag looks around until the pointer is locked */ if (e.button === 0 && this.pointerLocked()) { if (!this.keys.has('Mouse0')) this.pressed.add('Mouse0'); this.keys.add('Mouse0'); } });
+    on(window, 'mouseup', e => { if (this.dragging === 'mouse' && (e.button === 0 || e.button === 2)) this.dragging = null; if (e.button === 0) this.keys.delete('Mouse0'); });
+    on(canvas, 'contextmenu', e => e.preventDefault()); // right-drag is for looking, not for the browser menu
     on(document, 'pointerlockchange', () => { if (!this.pointerLocked()) this.onUnlock?.(); });
     // Touch look: drag anywhere on the canvas that isn't a control
     this.lookTouch = null;

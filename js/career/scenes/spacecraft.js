@@ -96,7 +96,7 @@ export default {
     makeUsable(caution.parent ? caution : caution, { label: 'Caution & warning panel', verb: 'Read', range: 1.8, enabled: () => alarm && !read, use: () => { if (!silenced) { hud.flash('Silence the master alarm first, so you can think.', ''); } read = true; sfx.ui(); hud.flash(DRILLS[D].why, '', 6000); drawScreens(); } }); ix.add(caution);
     makeUsable(ptt, { label: 'PUSH-TO-TALK', verb: 'Press', range: 1.8, enabled: () => ctx.isDone('drills') && !ctx.isDone('report'), use: async () => { await ctx.talk([{ who: ctx.name, text: 'Houston, all faults cleared. Systems nominal.' }, { who: 'Mission Control', text: 'Copy, systems nominal. Nice work, {name}. That\'s how a crew stays calm.', do: () => ctx.done('report') }]); finish(); } }); ix.add(ptt);
     // the seat camera
-    player.seat = { pos: new THREE.Vector3(0, 1.62, 0.35), yaw: 0, yawRange: 1.2, pitchMin: -1.0, pitchMax: 0.6, roll: 0 };
+    player.seat = { pos: new THREE.Vector3(0, 1.62, 0.35), yaw: 0, yawRange: 2.0, pitchMin: -1.1, pitchMax: 1.0, roll: 0 };
     player.pitch = -0.35;
     if (state.di >= state.drills.length && powered()) ctx.done('drills');
     if (powered() && !ctx.isDone('drills')) setTimeout(nextDrill, 3000);

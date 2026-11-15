@@ -6,12 +6,14 @@ import { SURFACE_BODIES, SITE_MAP, COLORS } from '../data/surfaces.js';
 import { Terrain, makePainter, grainTextures, rng, applySunVis, fbm2 } from './terrain.js';
 import { makeAstronaut, AstroAnimator, makeRover, makeModel, makeLM, makeLander, rockGeometry, rockTex, bootprintTex, trackTex } from './models.js';
 import { fitEllipsoid, rockCollider, rockTopAt, sphereHit, segRock, circleBox, segBox } from './collision.js';
-import { glowTexture, ringTexture, dotTexture } from '../scene/textures.js';
-import { bus, settings, progress, save, addXP, log, gameEvent } from '../systems/core.js';
+import { glowTexture, dotTexture } from '../scene/textures.js';
+import { bus, settings, progress, save, addXP, awardBadge, checkBadges, log, gameEvent } from '../systems/core.js';
 import { $, h, toast, openModal, modalOpen } from '../ui/dom.js';
 
 const DEG = Math.PI / 180, G_EARTH = 9.81, UP = new THREE.Vector3(0, 1, 0);
 const dirFrom = (az, el) => new THREE.Vector3(Math.sin(az * DEG) * Math.cos(el * DEG), Math.sin(el * DEG), -Math.cos(az * DEG) * Math.cos(el * DEG));
+const ROCK_LIFT = 0.8; // rocks up to 0.8 m across can be picked up; bigger boulders give a chipped sample
+const ZERO_M = new THREE.Matrix4().makeScale(0, 0, 0);
 const fmt = (v, d = 1) => (Math.abs(v) < 10 ? v.toFixed(d) : Math.round(v).toString());
 const fmtTime = s => s < 90 ? `${s.toFixed(1)} s` : s < 5400 ? `${(s / 60).toFixed(1)} min` : `${(s / 3600).toFixed(1)} h`;
 const DOSE_LIMIT = 250; // mSv — NASA's 30-day career-protective limit for blood-forming organs
@@ -48,7 +50,7 @@ export class SurfaceGame {
     this.mobile = matchMedia('(max-width: 720px)').matches || document.body.classList.contains('touch');
     this.low = settings.quality === 'low';
     this.rec = surfaceSave(siteId); // visits are counted in start(), so an aborted landing doesn't count
-    this.state = { walked: 0, driven: 0, skipWalk: 0, skipDrive: 0, jetUsed: 0, dose: 0, maxJump: 0, airMax: 0, lastJump: 0, lastJumpAt: 0, lastAir: 0, lastAirAt: 0 };
+    this.state = { walked: 0, driven: 0, jetUsed: 0, dose: 0, maxJump: 0, airMax: 0, lastJump: 0, lastJumpAt: 0, lastAir: 0, lastAirAt: 0 };
     this.keys = new Set(); this.joy = { x: 0, y: 0 }; this.jumpHeld = false; this.jumpT = 0; this.downHeld = false;
     this.rocks = []; this.boxes = []; this.nearRocks = []; this.nearBoxes = [];
     this.pendingEv = new Set(); this.objBase = {};
@@ -120,7 +122,6 @@ export class SurfaceGame {
       const ring = new THREE.Mesh(ringGeo, ringMat); ring.rotation.x = Math.PI / 2; ring.position.y = 0.04; grp.add(ring);
       grp.userData = { sp, ring, rock }; scene.add(grp); this.sampleObjs.push(grp);
     }
-    if (s.lava) this.buildLava();
     this.buildParticles();
     this.buildDecals();
 
@@ -170,14 +171,6 @@ export class SurfaceGame {
       const planet = new THREE.Mesh(new THREE.SphereGeometry(rad, 48, 32), m);
       this.parentDir = dirFrom(P.az, P.el); planet.position.copy(this.parentDir.clone().multiplyScalar(Dp)); planet.rotation.z = 0.2;
       sc.add(planet);
-      if (P.rings) {
-        // Enceladus orbits in Saturn's ring plane, so the rings are seen almost exactly edge-on.
-        const rg = new THREE.RingGeometry(rad * 1.11, rad * 2.27, 128, 1); const uvs = rg.attributes.uv, pp = rg.attributes.position;
-        for (let i = 0; i < uvs.count; i++) { const rr = Math.hypot(pp.getX(i), pp.getY(i)); uvs.setXY(i, (rr - rad * 1.11) / (rad * 1.16), 0.5); }
-        const rt = new THREE.CanvasTexture(ringTexture()); rt.colorSpace = THREE.SRGBColorSpace;
-        const ring = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ map: rt, transparent: true, side: THREE.DoubleSide, fog: false, depthWrite: false }));
-        ring.position.copy(planet.position); ring.lookAt(0, 0, 0); ring.rotateX(Math.PI / 2 - 0.004); ring.rotateY(0.15); sc.add(ring);
-      }
     }
   }
 
@@ -214,20 +207,23 @@ export class SurfaceGame {
     // Each rock's collider is an ellipsoid fitted to its own mesh, then given the same tilt, squash, scale and burial as the
     // visible instance — so every rock, of every size, is solid exactly where it is drawn.
     const fits = geos.map(g => fitEllipsoid(g.attributes.position.array));
-    this.rocks = [];
+    this.rocks = []; const picked = new Set(this.rec.samples);
     geos.forEach((geo, gi) => {
       const mine = keep.filter((_, i) => i % 3 === gi);
       const im = new THREE.InstancedMesh(geo, mat, mine.length); im.castShadow = true; im.receiveShadow = true;
       const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
-      mine.forEach(([x, z, sz], i) => {
+      for (const [i, [x, z, sz]] of mine.entries()) {
         e.set(R() * 0.6, R() * 6.28, R() * 0.6); q.setFromEuler(e);
         const pos = new THREE.Vector3(x, t.h(x, z) - sz * 0.25, z), sc = new THREE.Vector3(sz, sz * (0.7 + R() * 0.5), sz * (0.8 + R() * 0.4));
         m.compose(pos, q, sc);
         im.setMatrixAt(i, m);
         const shade = 0.75 + R() * 0.35; im.setColorAt(i, new THREE.Color(shade, shade, shade));
         const c = rockCollider(pos.x, pos.y, pos.z, [q.x, q.y, q.z, q.w], sc.x, sc.y, sc.z, fits[gi]);
+        // every rock can be picked up (or, for a boulder, sampled): remember which instance it is so it can be removed
+        Object.assign(c, { im, ii: i, sz, id: `rk${Math.round(x * 10)}_${Math.round(z * 10)}` });
+        if (picked.has(c.id)) { im.setMatrixAt(i, ZERO_M); continue; } // already in your sample bag from an earlier visit
         if (c.top > t.h(x, z) + 0.02) this.rocks.push(c); // skip rocks buried out of sight
-      });
+      }
       this.scene.add(im);
     });
   }
@@ -241,26 +237,6 @@ export class SurfaceGame {
     });
   }
 
-  buildLava() {
-    const L = this.site.lava, t = this.terrain, E = this.site.extent;
-    const y = t.h(L.x - 140, 0) + 0.4;
-    const w = E + L.x - 90;
-    const g = new THREE.PlaneGeometry(w, E * 2, 1, 1); g.rotateX(-Math.PI / 2);
-    this.lavaMat = new THREE.ShaderMaterial({
-      uniforms: { uT: { value: 0 }, uGlow: { value: new THREE.Color(...L.glow) } },
-      vertexShader: 'varying vec2 vP; void main(){ vec4 w = modelMatrix*vec4(position,1.); vP = w.xz; gl_Position = projectionMatrix*viewMatrix*w; }',
-      fragmentShader: `varying vec2 vP; uniform float uT; uniform vec3 uGlow;
-        float hs(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
-        vec2 cell(vec2 p){ vec2 i=floor(p), f=fract(p); float d1=9., d2=9.; for(int y=-1;y<=1;y++) for(int x=-1;x<=1;x++){ vec2 g=vec2(x,y); vec2 o=vec2(hs(i+g), hs(i+g+19.1)); o=.5+.45*sin(uT*.05+6.28*o); float d=length(g+o-f); if(d<d1){d2=d1;d1=d;} else if(d<d2) d2=d; } return vec2(d1,d2); }
-        void main(){ vec2 c = cell(vP/9.); float crack = smoothstep(.12, .0, c.y-c.x); vec2 c2 = cell(vP/2.3+3.); float fine = smoothstep(.08,.0,c2.y-c2.x);
-          vec3 crust = vec3(.05,.04,.035) + .03*hs(floor(vP*2.));
-          vec3 col = crust + uGlow*(crack*1.8 + fine*.35) ; gl_FragColor = vec4(col,1.); }`
-    });
-    const m = new THREE.Mesh(g, this.lavaMat); m.position.set(-E + w / 2, y, 0); this.scene.add(m);
-    const light = new THREE.PointLight(0xff6020, 30, 260, 1.4); light.position.set(L.x - 140, y + 25, 0); this.scene.add(light);
-    this.lavaEdge = -E + w;
-  }
-
   buildParticles() {
     // Dust kicked up by boots and wheels (also carries the jetpack's cold-gas puffs)
     const n = 1800; this.dust = { n, i: 0, pos: new Float32Array(n * 3), vel: new Float32Array(n * 3), life: new Float32Array(n), col: new Float32Array(n * 4) };
@@ -270,19 +246,6 @@ export class SurfaceGame {
     const dt = new THREE.CanvasTexture(dotTexture());
     this.dustPts = new THREE.Points(g, new THREE.PointsMaterial({ size: 0.075, map: dt, vertexColors: true, sizeAttenuation: true, transparent: true, depthWrite: false }));
     this.dustPts.frustumCulled = false; this.scene.add(this.dustPts);
-    // Geyser / plume jets
-    if (this.site.vents) {
-      const dark = this.site.vents[0].dark, rate = dark ? 50 : 140, life = dark ? 40 : 18;
-      // The ring buffer holds every particle alive at the steady state (rate × lifetime) plus a margin,
-      // so even ×16 time warp never recycles a particle that is still in the air.
-      const m = Math.ceil(rate * life * 1.15);
-      this.jets = { m, rate, life, acc: 0, pos: new Float32Array(m * 3), vel: new Float32Array(m * 3), age: new Float32Array(m), i: 0 };
-      for (let i = 0; i < m; i++) this.jets.pos[i * 3 + 1] = -1e5;
-      const jg = new THREE.BufferGeometry(); jg.setAttribute('position', new THREE.BufferAttribute(this.jets.pos, 3));
-      const tex = new THREE.CanvasTexture(glowTexture(dark ? 'rgba(40,34,30,0.9)' : 'rgba(235,245,255,0.9)', dark ? 'rgba(40,34,30,0.3)' : 'rgba(200,225,255,0.25)'));
-      this.jetPts = new THREE.Points(jg, new THREE.PointsMaterial({ map: tex, size: dark ? 26 : 34, sizeAttenuation: true, transparent: true, opacity: dark ? 0.55 : 0.5, depthWrite: false, blending: dark ? THREE.NormalBlending : THREE.AdditiveBlending, fog: false }));
-      this.jetPts.frustumCulled = false; this.scene.add(this.jetPts);
-    }
   }
 
   resize() { const w = innerWidth, h = innerHeight; this.renderer.setSize(w, h, false); this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); }
@@ -388,8 +351,6 @@ export class SurfaceGame {
     const E = t.E - 30; if (Math.abs(P.pos.x) > E || Math.abs(P.pos.z) > E) { P.pos.x = Math.max(-E, Math.min(E, P.pos.x)); P.pos.z = Math.max(-E, Math.min(E, P.pos.z)); v.x *= -0.2; v.z *= -0.2; this.edgeWarn(); }
     // boulders, the lander, landmarks and the parked rover are solid
     this.collidePlayer(P, v);
-    // lava (Io): too hot to enter
-    if (this.lavaEdge !== undefined && P.pos.x < this.lavaEdge + 6) { P.pos.x = this.lavaEdge + 6; v.x = Math.abs(v.x) * 0.3; this.warn('🔥 Suit alarm: lava crust ahead — surface over 300 °C, glowing cracks over 1,000 °C.'); }
     // support: terrain, or the top of a rock / model you are standing on
     const nh = this.supportAt(P.pos.x, P.pos.z, P.pos.y), wasOn = P.on;
     if (P.ground) {
@@ -511,7 +472,7 @@ export class SurfaceGame {
       R.u *= -0.15;
     }
   }
-  // Is a body of radius r standing at (x, z) clear of rocks, models, the rover and lava?
+  // Is a body of radius r standing at (x, z) clear of rocks, models and the rover?
   isFree(x, z, r = PR) {
     const g = this.terrain.h(x, z), lim = g + STEP, o = this._hit || (this._hit = {});
     for (const c of this.rocks) {
@@ -521,7 +482,7 @@ export class SurfaceGame {
     }
     for (const b of this.boxes) if (b.y1 > lim && b.y0 < g + HEAD && circleBox(b, x, z, r)) return false;
     if (this.rv && this.p && !this.driving && this.roverPush(x, z, r)) return false;
-    return !(this.lavaEdge !== undefined && x < this.lavaEdge + 8);
+    return true;
   }
   freeSpot(x, z, r = PR) {
     if (this.isFree(x, z, r)) return [x, z];
@@ -587,11 +548,6 @@ export class SurfaceGame {
     const E = t.E - 30; if (Math.abs(R.pos.x) > E || Math.abs(R.pos.z) > E) { R.pos.x = Math.max(-E, Math.min(E, R.pos.x)); R.pos.z = Math.max(-E, Math.min(E, R.pos.z)); R.u *= -0.2; if (control) this.edgeWarn(); }
     // boulders, the lander and landmarks stop the rover just as they stop you
     this.collideRover(R, fwd, control);
-    // lava (Io): the same boundary as on foot
-    if (this.lavaEdge !== undefined && R.pos.x < this.lavaEdge + 8) {
-      R.pos.x = this.lavaEdge + 8; if (fwd.x * R.u < 0) R.u = 0;
-      if (control) this.warn('🔥 Rover stopped: lava crust ahead — tyres and batteries would not survive ground over 300 °C.');
-    }
     // small-scale bumps (too small for the terrain mesh) that make a fast rover bounce, as the Apollo rovers did
     const nh = t.h(R.pos.x, R.pos.z) + (fbm2(R.pos.x / 2.6, R.pos.z / 2.6, 77, 2) - 0.5) * 0.24;
     if (R.ground) { if (R.pos.y > nh + 0.003) { R.ground = false; R.air = 0; } else R.pos.y = nh; }
@@ -620,7 +576,7 @@ export class SurfaceGame {
       w.children[0].rotation.x -= R.u * (dt || 0) / 0.41;
     }
     // front-wheel steering, matching the bicycle model in stepRover (rear wheels stay straight)
-    o.userData.wheels[0].rotation.y = o.userData.wheels[1].rotation.y = R.steer; o.userData.wheels[2].rotation.y = o.userData.wheels[3].rotation.y = 0;
+    o.userData.wheels[0].rotation.y = o.userData.wheels[1].rotation.y = -R.steer; /* turn the way the rover turns: +steer turns right, and +rotation.y would point the wheels left */ o.userData.wheels[2].rotation.y = o.userData.wheels[3].rotation.y = 0;
   }
   toggleRover() {
     if (!this.rv) return;
@@ -678,7 +634,7 @@ export class SurfaceGame {
     this._dm = new THREE.Matrix4(); this._dq = new THREE.Quaternion(); this._dq2 = new THREE.Quaternion(); this._dv = new THREE.Vector3(); this._d1 = new THREE.Vector3(1, 1, 1);
   }
   stamp(D, x, z, yaw) {
-    if (!D || (this.lavaEdge !== undefined && x < this.lavaEdge + 4)) return;
+    if (!D) return;
     const t = this.terrain, n = t.normal(x, z);
     this._dq.setFromUnitVectors(UP, n).multiply(this._dq2.setFromAxisAngle(UP, yaw));
     this._dm.compose(this._dv.set(x, t.h(x, z) + 0.018, z), this._dq, this._d1);
@@ -700,7 +656,7 @@ export class SurfaceGame {
     const R = this.rv, f = [-Math.sin(R.yaw), -Math.cos(R.yaw)], r = [Math.cos(R.yaw), -Math.sin(R.yaw)];
     for (const [x, z, s] of [[-1.03, -1.15, 1], [1.03, -1.15, 1], [-1.03, 1.15, 0], [1.03, 1.15, 0]]) { // only the front wheels steer
       const wx = R.pos.x + r[0] * x - f[0] * z, wz = R.pos.z + r[1] * x - f[1] * z;
-      this.stamp(this.tracks, wx, wz, R.yaw + R.steer * s);
+      this.stamp(this.tracks, wx, wz, R.yaw - R.steer * s);
     }
   }
 
@@ -739,26 +695,6 @@ export class SurfaceGame {
     // jetpack exhaust: a fixed number of puffs per second of simulated time, whatever the frame rate
     if (this.thrusting) { this.gasAcc = (this.gasAcc || 0) + 50 * dt; const n = Math.min(40, this.gasAcc | 0); this.gasAcc -= n; if (n) this.puffGas(n); } else this.gasAcc = 0;
     this.dustPts.geometry.attributes.position.needsUpdate = true; this.dustPts.geometry.attributes.color.needsUpdate = true;
-    if (this.jets) {
-      const J = this.jets, vents = this.site.vents, dark = vents[0].dark;
-      // accumulate fractional spawns so the plume rate is the same at 30, 60 or 144 fps and under time warp
-      J.acc += J.rate * dt; const spawn = J.acc | 0; J.acc -= spawn;
-      for (let e = 0; e < spawn; e++) {
-        const v = vents[Math.random() * vents.length | 0], i = J.i = (J.i + 1) % J.m, j = i * 3;
-        J.pos[j] = v.x + (Math.random() - 0.5) * 6; J.pos[j + 1] = t.h(v.x, v.z) + 1; J.pos[j + 2] = v.z + (Math.random() - 0.5) * 6;
-        const sp = dark ? 40 + Math.random() * 25 : 90 + Math.random() * 80, spread = dark ? 0.06 : 0.12;
-        J.vel[j] = (Math.random() - 0.5) * sp * spread; J.vel[j + 1] = sp; J.vel[j + 2] = (Math.random() - 0.5) * sp * spread; J.age[i] = 0;
-      }
-      for (let i = 0; i < J.m; i++) {
-        const j = i * 3; if (J.pos[j + 1] < -1e4) continue; J.age[i] += dt;
-        J.vel[j + 1] -= g * dt;
-        if (dark && J.pos[j + 1] > 700) { J.vel[j] += 6 * dt; J.vel[j + 1] *= 0.98; J.vel[j + 2] += 6 * dt; } // high winds shear the plume
-        J.pos[j] += J.vel[j] * dt; J.pos[j + 1] += J.vel[j + 1] * dt; J.pos[j + 2] += J.vel[j + 2] * dt;
-        if (J.age[i] > J.life) J.pos[j + 1] = -1e5;
-      }
-      this.jetPts.geometry.attributes.position.needsUpdate = true;
-    }
-    if (this.lavaMat) this.lavaMat.uniforms.uT.value += dt;
     // Hammer & feather
     if (this.drop) this.stepDrop(dt);
     // pulsing sample rings
@@ -817,7 +753,7 @@ export class SurfaceGame {
     // astronaut pose (walking poses are advanced per physics step in animStep)
     const P = this.p, a = this.astro;
     const adt = Math.min(0.25, this.simDt ?? dt), sp = Math.hypot(P.vel.x, P.vel.z);
-    if (this.driving) { a.visible = true; a.position.copy(this.roverObj.position); a.quaternion.copy(this.roverObj.quaternion); a.translateY(0.55); a.translateX(-0.4); a.translateZ(0.1); this.anim.update(adt, { seated: true, speed: 0, ground: true, g: this.g }); }
+    if (this.driving) { a.visible = true; a.position.copy(this.roverObj.position); a.quaternion.copy(this.roverObj.quaternion); a.translateY(0.49); a.translateX(-0.4); a.translateZ(0.2); /* hips on the left seat cushion, back against the seat back (it used to hover above and in front of it) */ this.anim.update(adt, { seated: true, speed: 0, ground: true, g: this.g }); }
     else a.visible = !this.fp;
     // camera drifts back behind you when you move (unless you've just dragged it)
     if (this.intro <= 0 && !this.fp && performance.now() - (this.dragT || 0) > 1800) {
@@ -882,7 +818,8 @@ export class SurfaceGame {
     if (this.site.objectives.every(x => this.objDone.has(x.id)) && !this.rec.complete) {
       this.rec.complete = true; save();
       log(`Expedition complete: ${this.site.name}`, '🏁');
-      setTimeout(() => gameEvent('surface:complete', { id: this.site.id }), 600);
+      // expedition reward (this used to come from the Free Explore mission list, which is gone)
+      setTimeout(() => { if (this.site.reward?.xp) addXP(this.site.reward.xp, `Expedition complete: ${this.site.name}`); if (this.site.badge) awardBadge(this.site.badge); checkBadges(); gameEvent('surface:complete', { id: this.site.id }); }, 600);
     }
     return true;
   }
@@ -896,9 +833,9 @@ export class SurfaceGame {
       let base = null; if (o.after) base = this.objBase[o.id] || (this.objBase[o.id] = { ...st, samples: this.rec.samples.length, t: performance.now() });
       let ok = this.pendingEv.has(o.id);
       if (!ok) switch (o.type) {
-        case 'walk': ok = st.walked - st.skipWalk - (base ? base.walked - base.skipWalk : 0) >= o.n; break; // traverse skips don't count as walking
+        case 'walk': ok = st.walked - (base ? base.walked : 0) >= o.n; break;
         case 'jump': ok = base ? st.lastJumpAt > base.t && st.lastJump >= o.n : st.maxJump >= o.n; break;
-        case 'drive': ok = st.driven - st.skipDrive - (base ? base.driven - base.skipDrive : 0) >= o.n; break;
+        case 'drive': ok = st.driven - (base ? base.driven : 0) >= o.n; break;
         case 'air': ok = base ? st.lastAirAt > base.t && st.lastAir >= o.n : st.airMax >= o.n; break;
         case 'jet': ok = st.jetUsed - (base ? base.jetUsed : 0) >= o.n; break;
         case 'samples': ok = this.rec.samples.length - (base ? base.samples : 0) >= o.n; break;
@@ -921,6 +858,10 @@ export class SurfaceGame {
     if (!this.driving) {
       for (const o of this.sampleObjs) { const sp = o.userData.sp; if (Math.hypot(P.x - sp.x, P.z - sp.z) < 2.6) { this.near = { kind: 'sample', o }; prompt = `E — collect ${sp.name}`; break; } }
       if (!this.near && this.rv && P.distanceTo(this.rv.pos) < 3.6) { this.near = { kind: 'rover' }; prompt = `E — board the ${this.site.rover.name}`; }
+      if (!this.near) { // any loose rock within reach
+        let best = null, bd = 1e9; for (const r of this.nearRocks) { const d = Math.hypot(P.x - r.x, P.z - r.z) - Math.max(r.ex, r.ez); if (d < 1.3 && d < bd && (r.sz <= ROCK_LIFT || !this.rec.samples.includes('chip:' + r.id))) { bd = d; best = r; } }
+        if (best) { this.near = { kind: 'rock', r: best }; prompt = best.sz <= ROCK_LIFT ? 'E — pick up the rock' : 'E — chip a sample off the boulder'; }
+      }
     } else prompt = 'E — get off the rover';
     if (prompt !== this._prompt) { this._prompt = prompt; const el = this.hud.prompt; el.textContent = prompt; el.hidden = !prompt; }
   }
@@ -931,6 +872,7 @@ export class SurfaceGame {
     if (this.driving) return this.toggleRover();
     if (!this.near) return;
     if (this.near.kind === 'rover') return this.toggleRover();
+    if (this.near.kind === 'rock') return this.takeRock(this.near.r);
     const o = this.near.o, sp = o.userData.sp;
     if (sp.needsShadow && this.sunNow()) return this.warn('This ice would sublimate in sunlight — the sample must come from the permanently shadowed ground.');
     this.rec.samples.push(sp.id); save();
@@ -938,6 +880,16 @@ export class SurfaceGame {
     this.sampleObjs = this.sampleObjs.filter(x => x !== o); this.near = null;
     bus.emit('sfx', 'scan'); addXP(20, 'Sample collected'); log(`Collected ${sp.name} on ${this.body.name}`, '🪨');
     this.say(`🪨 ${sp.name}: ${sp.fact}`, 9000);
+    this.renderObjectives();
+  }
+  // Loose rocks: small ones go into the sample bag (the rock disappears and its collider goes with it); boulders give one chip each
+  takeRock(r) {
+    const lift = r.sz <= ROCK_LIFT;
+    this.rec.samples.push(lift ? r.id : 'chip:' + r.id); save(); this.near = null; this._prompt = null;
+    if (lift) { r.im.setMatrixAt(r.ii, ZERO_M); r.im.instanceMatrix.needsUpdate = true; this.rocks = this.rocks.filter(x => x !== r); this.nearRocks = this.nearRocks.filter(x => x !== r); }
+    const n = this.rec.samples.filter(x => /^(rk|chip:)/.test(x)).length;
+    bus.emit('sfx', 'scan'); addXP(5, lift ? 'Rock collected' : 'Boulder sample chipped');
+    this.say(lift ? `🪨 Rock bagged (${n} in your sample bag). Every rock tells part of the Moon's history.` : `🔨 Chipped a sample off the boulder (${n} in your sample bag).`, 3500);
     this.renderObjectives();
   }
   scan() {
@@ -1025,13 +977,14 @@ export class SurfaceGame {
   drawCompass() {
     const el = this.hud.compass;
     const heading = ((-this.camYaw / DEG) % 360 + 360) % 360; // bearing the camera looks along
-    const items = [['N', 0], ['E', 90], ['S', 180], ['W', 270], ['☀', this.site.sun.az]];
-    if (this.site.parent) items.push(['🪐', this.site.parent.az, this.site.parent.name]);
+    // one symbol style for every body: the astronomical signs ☉ (Sun) and ⊕ (Earth), each with its name underneath
+    const items = [['N', 0], ['E', 90], ['S', 180], ['W', 270], ['☉', this.site.sun.az, 'Sun']];
+    if (this.site.parent) items.push(['⊕', this.site.parent.az, this.site.parent.name]);
     const P = this.driving ? this.rv.pos : this.p.pos;
     const next = this.site.objectives.find(o => !this.objDone.has(o.id) && (o.type === 'reach' || o.type === 'sample') && (!o.after || this.objDone.has(o.after)));
     if (next) { const tgt = next.type === 'reach' ? this.site.pois.find(p => p.id === next.poi) : this.site.samples.find(s => s.id === next.sample); if (tgt) { const az = (Math.atan2(tgt.x - P.x, -(tgt.z - P.z)) / DEG + 360) % 360; items.push(['◆', az, `${Math.round(Math.hypot(tgt.x - P.x, tgt.z - P.z))} m`]); } }
     let html = '';
-    for (const [l, az, sub] of items) { let d = ((az - heading + 540) % 360) - 180; if (Math.abs(d) > 70) continue; html += `<span style="left:${50 + d / 70 * 50}%" class="${l === '◆' ? 'tgt' : l.length === 1 && 'NESW'.includes(l) ? 'card' : ''}">${l}${sub ? `<small>${sub}</small>` : ''}</span>`; }
+    for (const [l, az, sub] of items) { let d = ((az - heading + 540) % 360) - 180; if (Math.abs(d) > 70) continue; html += `<span style="left:${(50 + d / 70 * 50).toFixed(2)}%" class="${l === '◆' ? 'tgt' : 'NESW'.includes(l) ? 'card' : 'body'}"><b>${l}</b>${sub ? `<small>${sub}</small>` : ''}</span>`; }
     el.innerHTML = html + '<i></i>';
   }
   drawMiniBase() {
@@ -1069,29 +1022,16 @@ export class SurfaceGame {
       const d = Math.hypot(p.x - P.x, p.z - P.z);
       const real = d / Math.max(0.05, speed);
       rows.append(h('div', { class: 'mission-row' }, h('div', { class: 'mr-main' }, h('b', {}, `${p.icon || '📍'} ${p.name}`), h('small', {}, `${Math.round(d)} m away · ${this.driving ? 'drive' : 'on foot'} about ${fmtTime(real)}`)),
-        d > 250 ? h('button', { class: 'btn sm', onclick: () => { mm.close(); this.traverse(p); } }, 'Traverse') : h('small', { class: 'muted' }, 'nearby')));
+        d < 40 ? h('small', { class: 'muted' }, 'nearby') : null));
     }
-    const mm = openModal({ title: `🗺 ${s.name} site map`, wide: true, body: h('div', { class: 'sx-mapwrap' }, big, h('div', {}, h('p', { class: 'muted tiny' }, 'North is up. Feature sizes come from mission data; positions are approximate. "Traverse" skips the travel time — the clock shows how long it would really take.'), rows)) });
-  }
-  traverse(p) {
-    const R = this.rv, t = this.terrain, from = (this.driving ? R.pos : this.p.pos).clone();
-    const ang = Math.atan2(p.x - from.x, p.z - from.z);
-    // stop short of the target, on clear ground (never inside a boulder, model or the rover)
-    const [x, z] = this.freeSpot(p.x - Math.sin(ang) * (p.r ? p.r * 0.5 : 3), p.z - Math.cos(ang) * (p.r ? p.r * 0.5 : 3), this.driving ? 1.9 : PR);
-    const dist = Math.hypot(x - from.x, z - from.z), secs = dist / Math.max(0.05, this.driving ? R.max : Math.min(3.2, 1.75 * Math.sqrt(this.g)));
-    // the distance skipped is logged, but walk / drive objectives only count distance you actually covered
-    if (this.driving) { R.pos.set(x, t.h(x, z), z); R.u = 0; R.vy = 0; R.ground = true; this.state.driven += dist; this.state.skipDrive += dist; this.updateRoverPose(0); }
-    else { this.p.pos.set(x, t.h(x, z), z); this.p.vel.set(0, 0, 0); this.p.ground = true; this.p.on = 0; this.state.walked += dist; this.state.skipWalk += dist; }
-    if (this.body.dose) this.state.dose += this.body.dose * secs;
-    this.refreshNear(true); this.camSnap = true;
-    this.say(`⏩ Traverse complete — that took about ${fmtTime(secs)} of real surface time.`, 5000);
+    const mm = openModal({ title: `🗺 ${s.name} site map`, wide: true, body: h('div', { class: 'sx-mapwrap' }, big, h('div', {}, h('p', { class: 'muted tiny' }, 'North is up. Feature sizes come from mission data; positions are approximate. Times show how long the trip takes at your current pace.'), rows)) });
   }
   cycleWarp() { this.warpI = (this.warpI + 1) % WARPS.length; if (this.warnBtn) this.warnBtn.textContent = `×${WARPS[this.warpI]}`; toast({ icon: '⏩', title: `Time ×${WARPS[this.warpI]}`, text: 'Physics is unchanged — the clock just runs faster.', ms: 1800 }); }
   help() {
     openModal({ title: 'Surface controls', body: h('div', { class: 'help-grid' }, ...[
       ['W A S D / arrow keys / joystick', 'Walk (camera-relative) · drive the rover'], ['Shift', 'Lope / run'], ['Space (hold)', 'Charge and jump'],
       ['Mouse drag (left or right button)', 'Look around — the cursor is captured while you drag; sensitivity and invert-Y are in Settings'], ['Touch: drag the right side of the screen', 'Look around'], ['Wheel / pinch', 'Zoom'],
-      ['E', 'Collect sample · board / leave rover'], ['R', 'Science scan'], ['G', 'Hammer–feather drop test'], ['M', 'Site map & traverse'], ['V', 'First / third person'],
+      ['E', 'Collect sample · board / leave rover'], ['R', 'Science scan'], ['G', 'Hammer–feather drop test'], ['M', 'Site map'], ['V', 'First / third person'],
       ...(this.body.jetpack ? [['Space / C in the air', 'Jetpack up / down']] : []), ...(this.warnBtn ? [['T', 'Time warp']] : []),
       ['H', 'This controls list'], ['Esc', 'Pause']
     ].map(([k, v]) => h('div', { class: 'help-row' }, h('kbd', {}, k), h('span', {}, v)))) });

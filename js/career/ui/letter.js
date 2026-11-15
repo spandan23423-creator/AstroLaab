@@ -67,7 +67,7 @@ export function openLetter({ first = false, onDone } = {}) {
     h('p', { class: 'cx-ldate' }, letterDate()),
     h('p', {}, `Dear ${name},`),
     h('p', {}, 'Congratulations! We are delighted to tell you that you have been selected for the ', h('b', {}, 'NASA Junior Astronaut Training Program'), '.'),
-    h('p', {}, 'Out of many applicants, you stood out for your curiosity, your persistence and your love of science. Over the coming weeks you will train like a real astronaut candidate: spacesuits, life support, growing food in space, medicine, robotics, spacewalk practice and, if you complete it all, a launch.'),
+    h('p', {}, 'Out of many applicants, you stood out for your curiosity, your persistence and your love of science. Over the coming weeks you will train like a real astronaut candidate: spacesuits, life support, growing food in space, medicine, spacewalk practice and, if you complete it all, a launch.'),
     h('p', {}, 'Please report to the Astronaut Training Centre this morning. Bring this letter. Your instructors will meet you at registration.'),
     h('p', {}, 'Welcome to the team. The sky is not the limit.'),
     h('p', { class: 'cx-lsig' }, h('span', { class: 'cx-sigline' }, 'D. Reyes'), h('small', {}, 'Director, Junior Astronaut Training Program')),

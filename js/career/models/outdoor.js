@@ -120,12 +120,25 @@ export function makeCar(color = 0x3a6ea5, { interior = true } = {}) {
   swapModel(g, 'car', { size: 4.4, by: 'z', rotY: Math.PI }, { after: h => paintCar(h, color) });
   return g;
 }
+// A small sky-and-ground reflection map, so the imported car's paint and glass reflect something (without one the
+// metallic paint rendered flat and dark). Equirectangular canvas: blue sky, bright horizon, grey asphalt below.
+let carEnvTex = null;
+function carEnv() {
+  if (carEnvTex) return carEnvTex;
+  const c = document.createElement('canvas'); c.width = 256; c.height = 128; const x = c.getContext('2d');
+  const gr = x.createLinearGradient(0, 0, 0, 128);
+  gr.addColorStop(0, '#5f8fd0'); gr.addColorStop(0.45, '#cfe2f5'); gr.addColorStop(0.5, '#f4f6f8'); gr.addColorStop(0.53, '#8a8d92'); gr.addColorStop(1, '#3c3e42');
+  x.fillStyle = gr; x.fillRect(0, 0, 256, 128);
+  carEnvTex = new THREE.CanvasTexture(c); carEnvTex.mapping = THREE.EquirectangularReflectionMapping; carEnvTex.colorSpace = THREE.SRGBColorSpace;
+  return carEnvTex;
+}
 function paintCar(holder, color) {
-  const paint = new THREE.MeshStandardMaterial({ color, metalness: 0.45, roughness: 0.3, name: 'carPaint' });
+  const paint = new THREE.MeshPhysicalMaterial({ color, metalness: 0.5, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.08, envMap: carEnv(), envMapIntensity: 0.9, name: 'carPaint' });
   holder.traverse(o => {
     if (!o.isMesh) return; const m = o.material, n = o.name;
+    if (m && m.isMeshStandardMaterial && !m.envMap && m.metalness > 0.3) { o.material = m.clone(); o.material.envMap = carEnv(); o.material.envMapIntensity = 0.7; } // chrome, rims
     if (/CarPaint_Max_1$/.test(n)) o.material = paint;                                                       // body paint
-    else if (/CarPaint_Max_2$/.test(n)) { o.material = m.clone(); Object.assign(o.material, { transparent: true, opacity: 0.6, depthWrite: false, roughness: 0.08, metalness: 0.5 }); o.castShadow = false; } // tinted windows and glass roof
+    else if (/CarPaint_Max_2$/.test(n)) { o.material = m.clone(); Object.assign(o.material, { transparent: true, opacity: 0.6, depthWrite: false, roughness: 0.08, metalness: 0.5, envMap: carEnv(), envMapIntensity: 1 }); o.castShadow = false; } // tinted windows and glass roof
     else if (/LightGlass_Clear/.test(n)) { o.material = m.clone(); Object.assign(o.material, { transparent: true, opacity: 0.3, depthWrite: false }); o.castShadow = false; } // clear glass
   });
 }

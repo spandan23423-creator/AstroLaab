@@ -182,8 +182,11 @@ export class AstroAnimator {
     // phase: walking stride ties to distance (no foot sliding); loping uses a hop cadence that slows in low gravity
     const stride = 2 * (0.34 + 0.28 * Math.min(sp, 1.6));
     const walkRate = sp / stride * Math.PI * 2;
+    // loping (sprint in low gravity): each hop covers a distance that grows with speed, so the cadence follows the ground
+    // speed and the planted foot no longer skates when you run fast (it used to keep one fixed beat at every speed)
     const lopeT = Math.min(1.6, Math.max(0.45, 0.62 * Math.sqrt(1.62 / Math.max(0.05, s.g))));
-    const rate = s.ground ? walkRate * (1 - w.lope) + (Math.PI * 2 / lopeT) * Math.min(1, sp / 1.2) * w.lope : 0;
+    const hopLen = Math.max(0.9, Math.min(2.2, 0.9 + 0.35 * sp)), lopeRate = Math.max(Math.PI * 2 / (lopeT * 1.6), sp / hopLen * Math.PI * 2);
+    const rate = s.ground ? walkRate * (1 - w.lope) + lopeRate * w.lope : 0;
     const prev = this.phase; this.phase += rate * dt;
     const steps = [];
     if (this.onStep && s.ground && sp > 0.25) {
@@ -202,8 +205,9 @@ export class AstroAnimator {
       spineX: -0.06 * A, spineY: 0.07 * A * Math.sin(f), headY: -0.04 * A * Math.sin(f), bounce: 0.025 * A * Math.abs(Math.cos(f))
     };
     const hop = Math.abs(Math.sin(f / 2)), comp = Math.pow(1 - hop, 3);
+    const LA = 0.75 + 0.35 * Math.min(1, sp / 3); // bigger leg swing the faster you lope
     const lope = {
-      hipL: 0.45 + 0.25 * Math.sin(f - 0.6), hipR: -0.1 + 0.3 * Math.sin(f - 1.4),
+      hipL: (0.45 + 0.25 * Math.sin(f - 0.6)) * LA, hipR: (-0.1 + 0.3 * Math.sin(f - 1.4)) * LA,
       kneeL: -(0.25 + 0.7 * comp), kneeR: -(0.45 + 0.5 * comp + 0.3 * hop),
       shL: 0.4 + 0.08 * hop, shR: 0.4 + 0.08 * hop, shZL: 0.35, shZR: -0.35, elL: 0.7, elR: 0.7,
       spineX: -0.2 - 0.06 * comp, headX: 0.12, bounce: 0.11 * hop * Math.min(1, sp / 1.5) - 0.04 * comp

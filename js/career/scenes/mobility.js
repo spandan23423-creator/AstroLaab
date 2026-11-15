@@ -57,7 +57,7 @@ export default {
       return 0;
     };
     // sample box and the drop pad
-    const crate = new THREE.Group(); box(0.45, 0.32, 0.35, std(0xe8ebf0), 0, 0.16, 0, crate); box(0.47, 0.04, 0.37, std(0x2b6ad8), 0, 0.3, 0, crate); crate.position.set(6.4, 0, 5.3); scene.add(crate);
+    const crate = new THREE.Group(); box(0.45, 0.3, 0.35, std(0xe8ebf0), 0, 0.15, 0, crate); box(0.47, 0.05, 0.37, std(0x2b6ad8), 0, 0.325, 0, crate); crate.position.set(6.4, 0, 5.3); scene.add(crate); // lid sits on top of the body (their top faces used to share a plane and flicker)
     carry.makeCarriable(crate, { id: 'sample', name: 'Sample box' });
     const pad = floorMark(scene, -2.5, 5.2, 1.2, 1.2); const padSock = invisibleMark(scene, -2.5, 0.2, 5.2); padSock.scale.set(4, 1.4, 4);
     const ps = makeSign('DROP PAD', 'Sample box here', 1.1); ps.position.set(-2.5, 1.3, 6.46); ps.rotation.y = Math.PI; scene.add(ps);

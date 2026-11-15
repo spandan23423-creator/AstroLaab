@@ -413,11 +413,13 @@ body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::aft
 .sx-exit { font-weight: 700; background: linear-gradient(135deg, #3d6bff, #8b5cf6); }
 .sx-actions { right: 12px; bottom: 14px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: 60vw; }
 .sx-jumpbtn { width: 64px; height: 64px; border-radius: 50%; font-size: 1.6rem; background: rgba(63, 224, 160, 0.25); border-color: rgba(63, 224, 160, 0.6); touch-action: none; }
-.sx-compass { left: 50%; top: 12px; transform: translateX(-50%); width: min(420px, 40vw); height: 30px; border-radius: 999px; background: rgba(8, 10, 24, 0.6); border: 1px solid var(--border); overflow: hidden; pointer-events: none; }
-.sx-compass span { position: absolute; top: 4px; transform: translateX(-50%); font-size: 0.82rem; color: var(--muted); text-align: center; line-height: 1; white-space: nowrap; }
+.sx-compass { left: 50%; top: 12px; transform: translateX(-50%); width: min(420px, 40vw); height: 34px; border-radius: 999px; background: rgba(8, 10, 24, 0.6); border: 1px solid var(--border); overflow: hidden; pointer-events: none; }
+.sx-compass span { position: absolute; top: 3px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 0.9rem; color: var(--muted); line-height: 1; white-space: nowrap; }
+.sx-compass span b { font-weight: 700; font-family: 'Segoe UI Symbol', 'DejaVu Sans', 'Noto Sans Symbols', sans-serif; }
+.sx-compass span.body { color: #ffd98a; }
 .sx-compass span.card { color: var(--text); font-weight: 700; }
 .sx-compass span.tgt { color: var(--warn); }
-.sx-compass span small { display: block; font-size: 0.62rem; }
+.sx-compass span small { display: block; font-size: 0.66rem; color: var(--text); opacity: 0.85; }
 .sx-compass i { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--cyan); opacity: 0.6; }
 .sx-say { left: 50%; bottom: 96px; transform: translateX(-50%); width: min(620px, calc(100% - 24px)); padding: 10px 14px; font-size: 0.92rem; line-height: 1.45; background: rgba(8, 10, 24, 0.82); backdrop-filter: none; pointer-events: none; }
 .sx-prompt { left: 50%; top: 58%; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: rgba(0, 0, 0, 0.6); border: 1px solid var(--cyan); font-weight: 600; pointer-events: none; }

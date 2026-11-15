@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#05060f">
-  <meta name="description" content="ASTRO LAB — train as an astronaut, then explore the solar system.">
+  <meta name="description" content="ASTRO LAB — train as an astronaut, then land on the Moon.">
   <title>ASTRO LAB</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/career.css">
@@ -14,8 +14,6 @@
 
   <!-- 3D view lives here (behind all screens) -->
   <div id="scene-root" aria-hidden="false"></div>
-  <div id="labels" aria-hidden="true"></div>
-  <canvas id="guide-arrow" aria-hidden="true"></canvas>
 
   <!-- 1. Loading -->
   <section id="screen-loading" class="screen active" aria-label="Loading">
@@ -24,7 +22,7 @@
       <h1 class="logo">ASTRO<span>LAB</span></h1>
     </div>
     <div class="load-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="load-fill"></i></div>
-    <p id="load-text" class="muted">Calibrating telescopes…</p>
+    <p id="load-text" class="muted">Preparing the Moon…</p>
   </section>
 
   <!-- 2. Main menu -->
@@ -32,15 +30,13 @@
     <canvas id="menu-particles" aria-hidden="true"></canvas>
     <div class="menu-card glass">
       <h1 class="logo small">ASTRO<span>LAB</span></h1>
-      <p class="tagline">From your bedroom to orbit. Train as an astronaut, then explore the solar system.</p>
+      <p class="tagline">From your bedroom to the Moon. Train as an astronaut, then land on the lunar surface.</p>
       <nav class="menu-buttons" aria-label="Main menu">
         <button class="btn primary big" data-action="newgame">▶ New Game</button>
         <button class="btn big" data-action="resume" id="btn-resume" hidden>⟳ Resume Game</button>
         <button class="btn big" data-action="training">🎓 Training Modules</button>
-        <button class="btn big" data-action="explore">🌌 Free Explore</button>
+        <button class="btn big" data-action="lunar">🌕 Lunar Mission</button>
         <div class="menu-row">
-          <button class="btn" data-action="archive">📁 Mission Archive</button>
-          <button class="btn" data-action="logbook">📓 Space Logbook</button>
           <button class="btn" data-action="achievements">🏆 Achievements</button>
           <button class="btn" data-action="settings">⚙ Settings</button>
           <button class="btn" data-action="credits">✦ Credits</button>
@@ -61,80 +57,8 @@
     </div>
   </section>
 
-  <!-- 3. Mission briefing -->
-  <section id="screen-briefing" class="screen" aria-label="Mission briefing">
-    <div class="briefing glass">
-      <div class="brief-head">
-        <span class="chip">CLASSIFIED · MISSION BRIEFING</span>
-        <h1 class="logo small">ASTRO<span>LAB</span></h1>
-        <p class="role">Role: <strong>Astro Lab Cadet</strong></p>
-      </div>
-      <div class="brief-grid">
-        <div>
-          <h2>Your story</h2>
-          <p class="typed" id="brief-story">You have joined ASTRO LAB, humanity's orbital observatory, to explore the solar system, investigate celestial objects, complete scientific missions and unlock the secrets of the universe.</p>
-          <h2>Primary objective</h2>
-          <p>Explore planets, complete mission files, conduct simulations, answer quizzes and earn badges.</p>
-          <h2>Early objectives</h2>
-          <ol class="checklist" id="brief-checklist"></ol>
-        </div>
-        <div>
-          <h2>Controls</h2>
-          <div class="controls-mini" id="brief-controls"></div>
-          <p class="muted tiny">Open the full controls guide any time with <kbd>H</kbd> or the ? button.</p>
-        </div>
-      </div>
-      <div class="brief-actions">
-        <button class="btn primary big pulse" id="btn-begin">BEGIN MISSION</button>
-        <button class="btn ghost" id="btn-skip">Skip Tutorial</button>
-        <button class="btn ghost" id="btn-brief-back">← Main menu</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- 5. In-game HUD -->
-  <section id="screen-game" class="screen hud" aria-label="Solar system">
-    <header class="hud-top">
-      <div class="profile glass" id="hud-profile" role="button" tabindex="0" aria-label="Open Space Logbook">
-        <div class="rank-badge" id="hud-level">1</div>
-        <div class="rank-info"><b id="hud-rank">Cadet</b><div class="xpbar"><i id="hud-xp"></i></div><small id="hud-xptext">0 XP</small></div>
-      </div>
-      <nav class="toolbar glass" aria-label="Game menu">
-        <button class="tbtn" data-act="journal" title="Mission Journal (J)" aria-label="Mission Journal">📓<span>Journal</span></button>
-        <button class="tbtn" data-act="map" title="System Map (M)" aria-label="System Map">🗺️<span>Map</span></button>
-        <button class="tbtn" data-act="compare" title="Compare true scale" aria-label="Compare true scale">📏<span>Scale</span></button>
-        <button class="tbtn" data-act="lab" title="Simulation Lab" aria-label="Simulation Lab">🧪<span>Lab</span></button>
-        <button class="tbtn" data-act="archive" title="Mission Archive" aria-label="Mission Archive">📁<span>Archive</span></button>
-        <button class="tbtn" data-act="explorer" title="Celestial Explorer" aria-label="Celestial Explorer">🌌<span>Explorer</span></button>
-        <button class="tbtn" data-act="logbook" title="Space Logbook" aria-label="Space Logbook">🏅<span>Logbook</span></button>
-        <button class="tbtn" data-act="help" title="Help & Controls (H)" aria-label="Help and controls">❔<span>Help</span></button>
-        <button class="tbtn" data-act="menu" title="Main menu" aria-label="Main menu">☰<span>Menu</span></button>
-      </nav>
-    </header>
-
-    <aside class="tracker glass" id="tracker" aria-live="polite"></aside>
-
-    <aside class="info-panel glass" id="info-panel" aria-live="polite" hidden></aside>
-
-    <div class="scale-note" id="scale-note">⚠ Not to scale: planet sizes are enlarged and distances compressed so everything fits. <button class="linkbtn" data-act="compare">See true scale</button></div>
-
-    <footer class="timebar glass" id="timebar">
-      <button class="tbtn sm" id="t-slower" aria-label="Slower (Ctrl)">−</button>
-      <button class="tbtn sm" id="t-pause" aria-label="Pause or resume (Space)">❚❚</button>
-      <button class="tbtn sm" id="t-faster" aria-label="Faster (Shift)">+</button>
-      <div class="tinfo"><b id="t-date">—</b><small id="t-speed">—</small></div>
-      <button class="tbtn sm" id="t-focus" aria-label="Focus selected (F)" title="Focus selected (F)">🎯</button>
-    </footer>
-
-    <div class="joystick" id="joystick" aria-label="Movement joystick"><div class="stick"></div></div>
-    <div class="coach glass" id="coach" hidden></div>
-  </section>
-
-  <!-- Full-screen panels -->
-  <section id="screen-archive" class="screen panel-screen" aria-label="Space Mission Archive"></section>
-  <section id="screen-explorer" class="screen panel-screen" aria-label="Celestial Explorer"></section>
-  <section id="screen-lab" class="screen panel-screen" aria-label="Simulation Laboratory"></section>
-  <section id="screen-surface" class="screen surface-screen" aria-label="Surface expedition"></section>
+  <!-- Full-screen game views -->
+  <section id="screen-surface" class="screen surface-screen" aria-label="Lunar Mission"></section>
   <section id="screen-career" class="screen career-screen" aria-label="Astronaut career"></section>
 
   <!-- Modal layer -->

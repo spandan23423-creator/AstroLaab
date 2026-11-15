@@ -1,5 +1,5 @@
-// ASTRO LAB — event bus, persistence, progression and mission engine
-import { MISSIONS, MISSION_MAP, STORY_ORDER, BADGES, BADGE_MAP, rankFor, dailyMission } from '../data/missions.js';
+// ASTRO LAB — event bus, persistence and progression (XP, ranks, badges)
+import { BADGES, BADGE_MAP, rankFor } from '../data/missions.js';
 
 // ---------------- Event bus ----------------
 const listeners = new Map();
@@ -34,21 +34,19 @@ function writeJSON(key, v) {
   }
 }
 
-export const defaultSettings = () => ({ quality: 'auto', sound: true, reducedMotion: matchMedia?.('(prefers-reduced-motion: reduce)').matches || false, showOrbits: true, showLabels: true, textScale: 1, joystick: 'auto',
+export const defaultSettings = () => ({ quality: 'auto', sound: true, reducedMotion: matchMedia?.('(prefers-reduced-motion: reduce)').matches || false, textScale: 1, joystick: 'auto',
   difficulty: 'normal', musicVol: 0.5, sfxVol: 0.8, textSpeed: 'normal', sensitivity: 1, invertY: false, subtitles: true, colorblind: false, language: 'en', controls: 'auto' });
 export const settings = Object.assign(defaultSettings(), readJSON(SETTINGS_KEY) || {});
 export function saveSettings() { writeJSON(SETTINGS_KEY, settings); bus.emit('settings', settings); }
 
 const freshProgress = () => ({
-  version: 1, created: Date.now(), xp: 0, badges: [], cards: [], files: [], discovered: [], scanned: [], quizzesPassed: [],
-  missions: {}, taskProgress: {}, activeMission: null, sims: {}, log: [], dailyDone: {},
-  stats: { perfectQuizzes: 0, quizzesTaken: 0, dailies: 0 }, tutorialSeen: false, surface: { sites: {}, jumps: {} }, career: null
+  version: 1, created: Date.now(), xp: 0, badges: [], log: [], stats: {}, surface: { sites: {}, jumps: {} }, career: null
 });
 
 export const progress = freshProgress();
 export function hasSave() { return !!readJSON(SAVE_KEY); }
 // Keep only fields whose type matches the fresh save, so a damaged or hand-edited save can't break the game later.
-const STRING_LISTS = ['badges', 'cards', 'files', 'discovered', 'scanned', 'quizzesPassed'];
+const STRING_LISTS = ['badges'];
 export function sanitizeSave(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return null;
   const d = freshProgress(), out = {}, isObj = v => v && typeof v === 'object' && !Array.isArray(v);
@@ -56,14 +54,12 @@ export function sanitizeSave(s) {
     const dv = d[k];
     if (!(k in d)) out[k] = v; // fields from newer versions are kept as they are
     else if (Array.isArray(dv)) { if (Array.isArray(v)) out[k] = STRING_LISTS.includes(k) ? v.filter(x => typeof x === 'string') : k === 'log' ? v.filter(x => isObj(x) && typeof x.text === 'string') : v; }
-    else if (k === 'activeMission') out[k] = typeof v === 'string' ? v : null;
     else if (k === 'career') out[k] = isObj(v) ? v : null;
     else if (isObj(dv)) { if (isObj(v)) out[k] = v; }
     else if (typeof v === typeof dv && (typeof v !== 'number' || Number.isFinite(v))) out[k] = v;
   }
   const st = isObj(out.stats) ? out.stats : {}; out.stats = { ...d.stats };
   for (const k of Object.keys(d.stats)) if (Number.isFinite(st[k])) out.stats[k] = st[k];
-  if (isObj(out.taskProgress)) for (const k of Object.keys(out.taskProgress)) if (!Array.isArray(out.taskProgress[k])) delete out.taskProgress[k];
   return out;
 }
 export function loadSave() {
@@ -109,125 +105,11 @@ export function awardBadge(id) {
   bus.emit('sfx', 'badge'); bus.emit('progress'); save();
   return true;
 }
-export function awardCard(id, name) {
-  if (!id || progress.cards.includes(id)) return false;
-  progress.cards.push(id);
-  log(`Knowledge card collected: ${name || id}`, '🃏');
-  bus.emit('toast', { icon: '🃏', title: 'Knowledge card', text: name || id });
-  bus.emit('progress'); save(); checkBadges();
-  return true;
-}
-export function awardFile(id, name) {
-  if (!id || progress.files.includes(id)) return false;
-  progress.files.push(id);
-  log(`Mission file unlocked: ${name}`, '📁');
-  bus.emit('toast', { icon: '📁', title: 'Mission file unlocked', text: name });
-  bus.emit('progress'); save(); refreshComputed(); checkBadges();
-  return true;
-}
 export function checkBadges() {
   for (const b of BADGES) if (b.check && !progress.badges.includes(b.id) && b.check(progress)) awardBadge(b.id);
 }
 
-// ---------------- Mission engine ----------------
-let daily = dailyMission();
-export function getDaily() { const d = dailyMission(); if (d.id !== daily.id) daily = d; return daily; }
-export function getMission(id) { return MISSION_MAP[id] || (id === getDaily().id ? getDaily() : null); }
-export function allMissions() { return [...MISSIONS, getDaily()]; }
-export function missionState(id) { return progress.missions[id] || 'available'; }
-
-export function taskStatus(mission, i) {
-  const t = mission.tasks[i];
-  if (t.computed) { const [n, total] = t.computed(progress); return { n, total, done: n >= total }; }
-  const n = (progress.taskProgress[mission.id] || [])[i] || 0;
-  const total = t.count || 1;
-  return { n: Math.min(n, total), total, done: n >= total };
-}
-export function missionPct(m) {
-  let d = 0; m.tasks.forEach((_, i) => { if (taskStatus(m, i).done) d++; });
-  return d / m.tasks.length;
-}
-export function currentTaskIndex(m) {
-  for (let i = 0; i < m.tasks.length; i++) if (!taskStatus(m, i).done) return i;
-  return -1;
-}
-
-export function startMission(id, { track = true } = {}) {
-  const m = getMission(id); if (!m) return;
-  if (missionState(id) === 'complete') return;
-  if (track || !progress.activeMission) progress.activeMission = id;
-  if (missionState(id) !== 'active') { progress.missions[id] = 'active'; log(`Mission started: ${m.name}`, '🚀'); }
-  if (!progress.taskProgress[id]) progress.taskProgress[id] = m.tasks.map(() => 0);
-  save(); bus.emit('mission:active', m); bus.emit('progress');
-  tryComplete(m);
-}
-
-function tryComplete(m) {
-  if (missionState(m.id) === 'complete') return;
-  if (m.tasks.every((_, i) => taskStatus(m, i).done)) completeMission(m);
-}
-
-export function completeMission(m) {
-  progress.missions[m.id] = 'complete';
-  if (m.category === 'daily') { progress.dailyDone[m.dailyKey] = true; progress.stats.dailies++; }
-  log(`Mission complete: ${m.name}`, '🏁');
-  const r = m.reward || {};
-  const result = { mission: m, xp: r.xp || 0, badge: null, card: null };
-  if (r.xp) { progress.xp += r.xp; }
-  if (r.badge && !progress.badges.includes(r.badge)) { progress.badges.push(r.badge); result.badge = BADGE_MAP[r.badge]; log(`Badge earned: ${result.badge.name}`, result.badge.icon); }
-  if (r.card && !progress.cards.includes(r.card)) { progress.cards.push(r.card); result.card = r.card; }
-  if (progress.activeMission === m.id) progress.activeMission = null;
-  save();
-  bus.emit('mission:complete', result);
-  bus.emit('progress');
-  // Chain to next story mission automatically
-  if (!progress.activeMission) {
-    const next = STORY_ORDER.find(x => missionState(x) !== 'complete' && !(x === 'orientation' && progress.tutorialSkipped)) || allMissions().find(x => missionState(x.id) === 'active')?.id;
-    if (next) setTimeout(() => { if (!progress.activeMission) startMission(next); }, 50);
-  }
-  refreshComputed();
-  checkBadges();
-}
-
-// Re-evaluate computed tasks (e.g. Mission Commander) for every started mission
-export function refreshComputed() {
-  for (const m of MISSIONS) {
-    if (!m.tasks.some(t => t.computed)) continue;
-    const st = missionState(m.id);
-    if (st === 'active') tryComplete(m);
-    else if (st === 'available' && m.category !== 'story' && m.tasks.every((_, i) => taskStatus(m, i).done)) { startMission(m.id, { track: false }); }
-  }
-  bus.emit('progress');
-}
-
-// Feed gameplay events to all active missions (tracked one first)
-export function gameEvent(evt, data = {}) {
-  const target = data.id;
-  // Record exploration facts used by other systems
-  if (evt === 'scan' && target && !progress.scanned.includes(target)) progress.scanned.push(target);
-  let changed = false;
-  const candidates = allMissions().filter(m => {
-    const st = missionState(m.id);
-    if (st === 'active') return true;
-    // Free exploration counts too: an untouched mission about this exact target starts automatically.
-    return st === 'available' && target && m.tasks.some(t => t.event === evt && t.target === target);
-  });
-  for (const m of candidates) {
-    if (missionState(m.id) === 'available') { progress.missions[m.id] = 'active'; log(`Mission started: ${m.name}`, '🚀'); if (!progress.activeMission) progress.activeMission = m.id; bus.emit('toast', { icon: '🚀', title: 'Mission started', text: m.name }); }
-    const tp = progress.taskProgress[m.id] || (progress.taskProgress[m.id] = m.tasks.map(() => 0));
-    m.tasks.forEach((t, i) => {
-      if (t.computed || t.event !== evt) return;
-      if (t.target && t.target !== target) return;
-      // Sequential-ish: allow out of order, but each task only counts up to its total
-      if ((tp[i] || 0) < (t.count || 1)) { tp[i] = (tp[i] || 0) + 1; changed = true; if (tp[i] >= (t.count || 1)) bus.emit('task:done', { mission: m, index: i }); }
-    });
-    if (changed) tryComplete(m);
-  }
-  if (changed) { save(); bus.emit('progress'); }
-  bus.emit('game:' + evt, data);
-}
-
-export function activeMission() { return progress.activeMission ? getMission(progress.activeMission) : null; }
-export function trackMission(id) { if (missionState(id) === 'active') { progress.activeMission = id; save(); bus.emit('mission:active', getMission(id)); bus.emit('progress'); } else startMission(id); }
+// Gameplay events (e.g. 'surface:objective') go out on the bus as 'game:<event>' for anything that wants them.
+export function gameEvent(evt, data = {}) { bus.emit('game:' + evt, data); }
 
 export { rankFor };

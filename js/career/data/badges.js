@@ -8,7 +8,6 @@ export const CAREER_BADGES = [
   { id: 'greenhouse-engineer', name: 'Greenhouse Engineer', icon: '🌱', desc: 'Built a working space greenhouse.', career: true },
   { id: 'life-support-tech', name: 'Life-Support Technician', icon: '💧', desc: 'Kept a greenhouse healthy and recycled its water.', career: true },
   { id: 'medical-observer', name: 'Medical Observer', icon: '🧠', desc: 'Completed health and neuroscience training.', career: true },
-  { id: 'robotic-arm-operator', name: 'Robotic Arm Operator', icon: '🦾', desc: 'Captured and moved targets with the robotic arm.', career: true },
   { id: 'power-l1', name: 'Power Systems L1', icon: '🔋', desc: 'Wired a habitat power system and kept life support running through a shadow.', career: true },
   { id: 'outpost-power', name: 'Lights On at the Pole', icon: '🌒', desc: 'Powered the lunar outpost and kept the crew safe through the crater shadow.', career: true },
   { id: 'eva-ready', name: 'EVA Ready', icon: '🛰️', desc: 'Completed spacewalk training and returned safely.', career: true },

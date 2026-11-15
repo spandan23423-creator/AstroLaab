@@ -66,18 +66,8 @@ function craters(c, n, seed, dark = 0.25, light = 0.18, maxR = 0.04) {
   return c;
 }
 
-// ---------- Recipes ----------
+// ---------- Recipes (Earth for the sky and menu, the Moon for the Lunar Mission) ----------
 const recipes = {
-  sun: (w, h) => paint(w, h, (x, y, z) => {
-    const n = fbm(x * 6, y * 6, z * 6, 3, 5); const g = fbm(x * 22, y * 22, z * 22, 9, 3);
-    return ramp(R([[0, '#b8300a'], [0.45, '#f07a14'], [0.7, '#ffc23a'], [1, '#fff3b0']]), n * 0.7 + g * 0.45 - 0.05);
-  }),
-  mercury: (w, h) => craters(paint(w, h, (x, y, z) => ramp(R([[0, '#4a4542'], [0.5, '#8b8580'], [1, '#c4bdb5']]), fbm(x * 4, y * 4, z * 4, 11, 6))), 380, 7, 0.3, 0.2),
-  venus: (w, h) => paint(w, h, (x, y, z, lat) => {
-    const warp = fbm(x * 2, y * 2, z * 2, 21, 4);
-    const n = fbm(x * 2 + warp * 2, y * 9 + warp * 3, z * 2, 22, 5);
-    return ramp(R([[0, '#8a5a24'], [0.4, '#c99a56'], [0.7, '#e8c98c'], [1, '#f6e6bf']]), n);
-  }),
   earth: (w, h) => paint(w, h, (x, y, z, lat) => {
     const n = fbm(x * 1.6, y * 1.6, z * 1.6, 31, 7);
     const alat = Math.abs(lat) / (Math.PI / 2);
@@ -93,111 +83,18 @@ const recipes = {
     c = mix(c, hex('#8a7f6e'), clamp((elev - 0.35) * 2));
     return c;
   }),
-  earthClouds: (w, h) => paint(w, h, (x, y, z, lat) => {
-    const n = fbm(x * 3 + 7, y * 6, z * 3, 41, 6);
-    const band = 0.85 + 0.25 * Math.cos(lat * 6);
-    const a = clamp((n * band - 0.5) * 3.2);
-    return [255, 255, 255, Math.round(a * 235)];
-  }),
   moon: (w, h) => craters(paint(w, h, (x, y, z) => {
     const n = fbm(x * 3, y * 3, z * 3, 51, 6); const maria = fbm(x * 1.3, y * 1.3, z * 1.3, 52, 3);
     let c = ramp(R([[0, '#5d5b58'], [0.5, '#9a9792'], [1, '#c9c6c0']]), n);
     if (maria > 0.56) c = mix(c, hex('#4a4846'), clamp((maria - 0.56) * 6));
     return c;
-  }), 520, 13, 0.28, 0.22),
-  mars: (w, h) => paint(w, h, (x, y, z, lat) => {
-    const n = fbm(x * 2.5, y * 2.5, z * 2.5, 61, 7); const alat = Math.abs(lat) / (Math.PI / 2);
-    let c = ramp(R([[0, '#5a2a14'], [0.42, '#a4482a'], [0.62, '#c96a3c'], [1, '#e2a06a']]), n);
-    const dark = fbm(x * 1.2, y * 1.2, z * 1.2, 62, 4);
-    if (dark < 0.42) c = mix(c, hex('#4a2a1e'), clamp((0.42 - dark) * 5));
-    if (alat > 0.88 + (n - 0.5) * 0.1) c = mix(c, hex('#f2ece4'), 0.95);
-    return c;
-  }),
-  phobos: (w, h) => craters(paint(w, h, (x, y, z) => ramp(R([[0, '#3a332e'], [1, '#7d7168']]), fbm(x * 4, y * 4, z * 4, 71, 5))), 120, 3, 0.35, 0.15, 0.08),
-  ceres: (w, h) => {
-    const c = craters(paint(w, h, (x, y, z) => ramp(R([[0, '#4c4a48'], [1, '#8e8a86']]), fbm(x * 4, y * 4, z * 4, 81, 5))), 300, 5);
-    const ctx = c.getContext('2d'); const g = ctx.createRadialGradient(w * 0.6, h * 0.42, 0, w * 0.6, h * 0.42, w * 0.012);
-    g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-    return c;
-  },
-  jupiter: (w, h) => {
-    const c = paint(w, h, (x, y, z, lat) => {
-      const t = fbm(x * 3, y * 3, z * 3, 91, 4);
-      const v = Math.sin((lat + (t - 0.5) * 0.12) * 14) * 0.5 + 0.5;
-      const fine = fbm(x * 2, y * 30, z * 2, 92, 3);
-      const stops = R([[0, '#8e5a3a'], [0.35, '#c79a72'], [0.6, '#ecdcc0'], [0.8, '#d8b48a'], [1, '#f6efe2']]);
-      return ramp(stops, v * 0.75 + fine * 0.3);
-    });
-    const ctx = c.getContext('2d'); const x = w * 0.62, y = h * 0.62;
-    const g = ctx.createRadialGradient(x, y, 0, x, y, w * 0.035);
-    g.addColorStop(0, 'rgba(190,80,50,0.95)'); g.addColorStop(0.7, 'rgba(200,110,70,0.7)'); g.addColorStop(1, 'rgba(220,170,130,0)');
-    ctx.save(); ctx.translate(x, y); ctx.scale(1.6, 0.85); ctx.translate(-x, -y); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, w * 0.035, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-    return c;
-  },
-  io: (w, h) => paint(w, h, (x, y, z) => {
-    const n = fbm(x * 3, y * 3, z * 3, 101, 5); const s = fbm(x * 9, y * 9, z * 9, 102, 3);
-    let c = ramp(R([[0, '#a0702a'], [0.5, '#e6c64a'], [1, '#f5ee9a']]), n);
-    if (s > 0.68) c = mix(c, hex('#2a1a10'), clamp((s - 0.68) * 8));
-    else if (s > 0.6) c = mix(c, hex('#d0602a'), clamp((s - 0.6) * 8));
-    return c;
-  }),
-  europa: (w, h) => {
-    const c = paint(w, h, (x, y, z) => ramp(R([[0, '#b8a68a'], [0.5, '#e6dccb'], [1, '#f8f4ec']]), fbm(x * 3, y * 3, z * 3, 111, 5)));
-    const ctx = c.getContext('2d'); let s = 9; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
-    ctx.strokeStyle = 'rgba(140,70,40,0.55)'; ctx.lineWidth = Math.max(1, w / 512);
-    for (let i = 0; i < 70; i++) { ctx.beginPath(); let x = rnd() * w, y = h * (0.15 + 0.7 * rnd()); ctx.moveTo(x, y); for (let k = 0; k < 6; k++) { x += (rnd() - 0.5) * w * 0.12; y += (rnd() - 0.5) * h * 0.12; ctx.lineTo(x, y); } ctx.stroke(); }
-    return c;
-  },
-  ganymede: (w, h) => craters(paint(w, h, (x, y, z) => {
-    const n = fbm(x * 2.5, y * 2.5, z * 2.5, 121, 6);
-    return n > 0.5 ? ramp(R([[0.5, '#8a8070'], [1, '#c8beb0']]), n) : ramp(R([[0, '#4a4036'], [0.5, '#6e6252']]), n);
-  }), 200, 21, 0.2, 0.3),
-  callisto: (w, h) => craters(paint(w, h, (x, y, z) => ramp(R([[0, '#2e2620'], [1, '#6a5c4e']]), fbm(x * 4, y * 4, z * 4, 131, 5))), 700, 23, 0.15, 0.45, 0.02),
-  saturn: (w, h) => paint(w, h, (x, y, z, lat) => {
-    const t = fbm(x * 2, y * 2, z * 2, 141, 3);
-    const v = Math.sin((lat + (t - 0.5) * 0.05) * 18) * 0.5 + 0.5;
-    return ramp(R([[0, '#a88a5a'], [0.4, '#d6bd8a'], [0.75, '#ecdcb4'], [1, '#f7eed6']]), v * 0.7 + fbm(x, y * 25, z, 142, 2) * 0.3);
-  }),
-  titan: (w, h) => paint(w, h, (x, y, z) => ramp(R([[0, '#a4641e'], [0.5, '#d49440'], [1, '#e8b868']]), fbm(x * 2, y * 2, z * 2, 151, 4))),
-  enceladus: (w, h) => paint(w, h, (x, y, z, lat) => {
-    let c = ramp(R([[0, '#c8d4dc'], [1, '#ffffff']]), fbm(x * 4, y * 4, z * 4, 161, 4));
-    if (lat < -1.1 && Math.abs(Math.sin(lat * 0 + (x * 9))) < 0.15) c = mix(c, hex('#6aa8d8'), 0.6);
-    return c;
-  }),
-  uranus: (w, h) => paint(w, h, (x, y, z, lat) => ramp(R([[0, '#7cc4cc'], [0.5, '#a6e0e4'], [1, '#c6f0f0']]), 0.5 + Math.sin(lat * 10) * 0.08 + (fbm(x * 2, y * 8, z * 2, 171, 3) - 0.5) * 0.3)),
-  neptune: (w, h) => {
-    const c = paint(w, h, (x, y, z, lat) => ramp(R([[0, '#1a3a9a'], [0.5, '#3a64d4'], [1, '#7aa2f0']]), 0.5 + Math.sin(lat * 9) * 0.15 + (fbm(x * 2, y * 10, z * 2, 181, 4) - 0.5) * 0.5));
-    const ctx = c.getContext('2d'); const x = w * 0.3, y = h * 0.62; const g = ctx.createRadialGradient(x, y, 0, x, y, w * 0.03);
-    g.addColorStop(0, 'rgba(10,20,70,0.85)'); g.addColorStop(1, 'rgba(10,20,70,0)'); ctx.save(); ctx.translate(x, y); ctx.scale(1.7, 1); ctx.translate(-x, -y); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); ctx.restore();
-    return c;
-  },
-  triton: (w, h) => paint(w, h, (x, y, z, lat) => {
-    const n = fbm(x * 4, y * 4, z * 4, 191, 5);
-    let c = ramp(R([[0, '#9a8a86'], [0.5, '#d8c6c0'], [1, '#f4ecea']]), n);
-    if (lat < -0.3) c = mix(c, hex('#f0d8d4'), 0.4);
-    return c;
-  }),
-  pluto: (w, h) => paint(w, h, (x, y, z, lat, lon) => {
-    const n = fbm(x * 3, y * 3, z * 3, 201, 6);
-    let c = ramp(R([[0, '#5a3a28'], [0.45, '#a8784e'], [0.7, '#d8b890'], [1, '#efe2cc']]), n);
-    // Heart-shaped bright region (Tombaugh Regio), approximate
-    const hx = (lon - Math.PI) * 1.3, hy = (lat - 0.15) * 2.2;
-    const heart = Math.pow(hx * hx + hy * hy - 0.25, 3) - hx * hx * hy * hy * hy;
-    if (heart < 0) c = mix(c, hex('#f6efe4'), 0.85);
-    return c;
-  }),
-  charon: (w, h) => paint(w, h, (x, y, z, lat) => {
-    let c = ramp(R([[0, '#5e5a58'], [1, '#a8a4a0']]), fbm(x * 4, y * 4, z * 4, 211, 5));
-    if (lat > 1.1) c = mix(c, hex('#7a3a2a'), clamp((lat - 1.1) * 3));
-    return c;
-  })
+  }), 520, 13, 0.28, 0.22)
 };
 
 export const TEXTURE_IDS = Object.keys(recipes);
 
-export function generateTexture(id, quality = 'high', small = false) {
+export function generateTexture(id, quality = 'high') {
   let w = quality === 'low' ? 256 : quality === 'medium' ? 384 : 512;
-  if (small) w = quality === 'high' ? 256 : 192;   // small moons don't need much detail
   const r = recipes[id];
   if (!r) return null;
   return r(w, w / 2);

@@ -4,6 +4,7 @@ import * as THREE from '../../../vendor/three.module.js';
 import { MAT } from './materials.js';
 import { std, box, cyl } from './house.js';
 import { makeSign } from './props.js';
+import { worldUI } from '../engine/layers.js';
 
 let cellTex = null;
 function solarCells() {
@@ -20,6 +21,8 @@ export function makeSocket(kind) {
   const g = new THREE.Group();
   const ring = cyl(0.045, 0.045, 0.03, MAT.glow(KIND_COL[kind] ?? 0xffffff, 0.8), 0, 0, 0, g, 16); ring.rotation.x = Math.PI / 2;
   cyl(0.028, 0.028, 0.035, std(0x15171c), 0, 0, 0.004, g, 12).rotation.x = Math.PI / 2;
+  // a bigger invisible hit sphere, so the socket is easy to aim at (the ring itself is only 9 cm across)
+  const hit = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), new THREE.MeshBasicMaterial({ visible: false })); hit.userData.hitbox = true; g.add(hit);
   g.userData.ring = ring; g.userData.kind = kind; return g;
 }
 
@@ -77,9 +80,9 @@ export function setBatteryLeds(rack, socPct, on = true) {
 export function makeBusBoard(loadIds = [], names = {}) {
   const g = new THREE.Group();
   box(1.2, 1.4, 0.12, std(0xd9dce2, { roughness: 0.5 }), 0, 0, 0, g);
-  const lab = makeSign('LOAD BUS', 'Habitat power distribution', 1.0, '#1f6b3a'); lab.position.set(0, 0.86, 0.0); g.add(lab);
+  const lab = makeSign('LOAD BUS', 'Habitat power distribution', 1.0, '#1f6b3a'); lab.position.set(0, 0.92, 0.0); g.add(lab); // above the board, not half inside it
   const breakers = {};
-  loadIds.forEach((id, i) => { const y = 0.5 - i * 0.13; const b = box(0.08, 0.06, 0.04, MAT.glow(0x3fe0a0, 0.8), -0.45, y, 0.07, g); breakers[id] = b; const t = makeSign(names[id] || id, '', 0.62, '#2a3550'); t.scale.setScalar(0.7); t.position.set(0.05, y, 0.065); g.add(t); });
+  loadIds.forEach((id, i) => { const y = 0.5 - i * 0.13; const b = box(0.08, 0.06, 0.04, MAT.glow(0x3fe0a0, 0.8), -0.45, y, 0.07, g); breakers[id] = b; const t = makeSign(names[id] || id, '', 0.62, '#2a3550'); t.scale.setScalar(0.55); t.position.set(0.02, y, 0.075); g.add(t); worldUI(t); });
   const s = makeSocket('bus'); s.position.set(0.45, -0.58, 0.08); g.add(s);
   g.userData = { socket: s, breakers }; return g;
 }

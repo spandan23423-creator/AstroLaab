@@ -51,6 +51,8 @@ const LIGHT = [
   { id: 'board', name: 'Glossy whiteboard (reflection)', fix: 'Put the matte cover on', weight: 10, done: 'Matte cover on: the reflection is gone.' }
 ];
 const HYD = { start: 40, goal: 100, sip: 10, sips: 5, decay: 0.12, warn: 25 };
+// Where the water bottle sits in the hand (camera space): low right, fully in view, above the sleeve
+const DRINK_HOLD = [0.17, -0.22, -0.5];
 
 export default {
   id: 'medical', title: 'Health & Neuroscience', music: 'centre', ambience: 'vent',
@@ -279,7 +281,7 @@ export default {
     cyl(0.04, 0.04, 0.22, shellM, 0, 0.11, 0, bottle, 16); cyl(0.022, 0.022, 0.035, std(0x2b6ad8), 0, 0.24, 0, bottle, 12);
     const water = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.2, 16), new THREE.MeshStandardMaterial({ color: 0x3a9ad8, roughness: 0.2 })); water.geometry.translate(0, 0.1, 0); water.position.y = 0.01; bottle.add(water);
     bottle.position.set(0.6, 0.775, 6.6); scene.add(bottle);
-    carry.makeCarriable(bottle, { id: 'bottle', name: 'Water bottle', stow: false, hold: { rot: [0, 0, 0], pos: [0.22, -0.3, -0.5], big: false } });
+    carry.makeCarriable(bottle, { id: 'bottle', name: 'Water bottle', stow: false, hold: { rot: [0, 0, 0], pos: DRINK_HOLD, big: false } });
     const coffee = new THREE.Group(); box(0.3, 0.42, 0.3, std(0x1a1d24), 0, 0.21, 0, coffee); box(0.1, 0.06, 0.03, MAT.glow(0xffb347, 0.8), 0, 0.33, 0.16, coffee); cyl(0.04, 0.035, 0.08, white, 0, 0.06, 0.1, coffee, 12); coffee.position.set(-3.6, 0.9, 6.55); coffee.rotation.y = Math.PI; scene.add(coffee);
     const crisps = new THREE.Group(); cyl(0.14, 0.09, 0.08, std(0x3a6ea5), 0, 0.04, 0, crisps, 18); for (let i = 0; i < 8; i++) { const c = new THREE.Mesh(new THREE.CircleGeometry(0.035, 8), std(0xf2c85a, { side: THREE.DoubleSide })); c.position.set(Math.cos(i) * 0.06, 0.085, Math.sin(i * 1.7) * 0.06); c.rotation.set(-Math.PI / 2 + Math.sin(i) * 0.4, 0, i); crisps.add(c); } hitBox(crisps, 0.3, 0.16, 0.3, 0, 0.06, 0); crisps.position.set(-2.4, 0.9, 6.55); scene.add(crisps);
     const bike = new THREE.Group(); box(0.12, 0.08, 1.1, dark, 0, 0.04, 0, bike); cyl(0.04, 0.04, 0.8, dark, 0, 0.45, 0.3, bike, 8); box(0.26, 0.06, 0.3, std(0x1a1d24), 0, 0.88, 0.3, bike); cyl(0.04, 0.04, 0.9, dark, 0, 0.5, -0.35, bike, 8); box(0.5, 0.04, 0.05, dark, 0, 0.96, -0.38, bike); const wheel = cyl(0.25, 0.25, 0.06, std(0x3a3f4a), 0, 0.3, -0.35, bike, 20); wheel.rotation.z = Math.PI / 2;
@@ -310,18 +312,30 @@ export default {
     makeUsable(crisps, { label: 'Salty crisps', verb: 'Eat some', range: 2.4, enabled: () => hydActive(), use: () => { sfx.paper(); bump(-6, '🧂 Salty snacks make your body hold on to salt and make you thirstier. Hydration down.', 'bad'); } }); ix.add(crisps);
     let biking = 0;
     makeUsable(bike, { label: 'Exercise bike', verb: 'Do a 6-second sprint on the', range: 2.4, enabled: () => hydActive() && !biking, use: () => { biking = 6; player.frozenByScene = true; hud.flash('🚴 Pedal! Exercise makes you sweat, and sweat is water you need to replace.', '', 3500); } }); ix.add(bike);
-    let sipCD = 0;
+    let sipCD = 0, drinkT = 0;
+    // A sip lifts the bottle up to the mouth, tips it towards you and brings it back down (the hands follow the bottle).
+    const DRINK_T = 0.75;
+    function drinkPose(dt) {
+      const hold = carry.hold; if (!hold) return;
+      if (carry.held !== bottle) { if (drinkT) { drinkT = 0; hold.rotation.set(0, 0, 0); } return; }
+      drinkT = Math.max(0, drinkT - dt);
+      const k = drinkT > 0 ? Math.sin(Math.PI * (1 - drinkT / DRINK_T)) : 0;
+      hold.position.set(DRINK_HOLD[0] - 0.17 * k, DRINK_HOLD[1] + 0.2 * k, DRINK_HOLD[2] + 0.2 * k);
+      hold.rotation.set(1.25 * k, 0, 0);
+    }
     function hydStep(dt, blocked) {
+      drinkPose(dt);
       if (!hydActive()) { if (input.touchButtons?.spray) input.touchButtons.spray.hidden = true; return; }
       meter.hidden = false; const s = H(); sipCD -= dt;
       if (input.touchButtons?.spray) input.touchButtons.spray.hidden = carry.held !== bottle;
       if (blocked) return;
-      const rate = biking > 0 ? 2.5 : HYD.decay * (s.diuretic > 0 ? 3 : 1); // a 6 s sprint costs about 15% s.lvl = Math.max(0, s.lvl - rate * dt); s.diuretic = Math.max(0, s.diuretic - dt);
+      const rate = biking > 0 ? 2.5 : HYD.decay * (s.diuretic > 0 ? 3 : 1); // a 6 s sprint costs about 15%
+      s.lvl = Math.max(0, s.lvl - rate * dt); s.diuretic = Math.max(0, s.diuretic - dt);
       if (biking > 0) { biking -= dt; wheel.rotation.x += dt * 14; if (biking <= 0) { biking = 0; player.frozenByScene = false; hud.flash('Sprint done. You sweated out a lot of water: drink to replace it.', '', 3500); } }
       if (carry.held === bottle && input.hit('spray') && sipCD <= 0) {
         sipCD = 0.8;
         if (s.fill <= 0) { sfx.wrong(); hud.flash('The bottle is empty. Fill it at the water dispenser.', '', 2500); }
-        else { s.fill--; sfx.gulp(); ctx.hands?.grip?.(400); bump(HYD.sip, null); hud.cap('[Gulp]', 800); }
+        else { s.fill--; sfx.gulp(); drinkT = DRINK_T; bump(HYD.sip, null); hud.cap('[Gulp]', 800); }
       }
       if (Math.random() < dt * 2) drawMeter(); checkHyd();
       if (!demo) setFx('vignette', s.lvl < HYD.warn ? 0.35 * (1 - s.lvl / HYD.warn) : 0);
@@ -333,7 +347,7 @@ export default {
     const habMark = floorMark(scene, -7.3, 4.6, 5.2, 4.6, 0x8a90a0); habMark.material.opacity = 0.1;
     const cot = new THREE.Group(); box(0.8, 0.32, 1.9, std(0x5a6e8c), 0, 0.16, 0, cot); box(0.78, 0.08, 1.85, std(0xe8ecf2), 0, 0.36, 0, cot); box(0.5, 0.08, 0.3, white, 0, 0.44, -0.75, cot); station(cot, -8.8, 4.8); player.addBox(-9.2, -7.95, 3.85, 5.75, 0, 0.6);
     // Arden sits on the edge of the cot (sit pose, feet on the floor): no floating, no clipping, her whole body visible
-    const arden = makePerson(LOOKS.commander); arden.root.position.set(-8.62, 0, 4.8); arden.root.rotation.y = Math.PI / 2; arden.sit = arden.sitTarget = 1; scene.add(arden.root);
+    const arden = makePerson(LOOKS.commander); arden.root.position.set(-8.7, 0, 4.8); /* hips over the mattress, knees just past the cot edge */ arden.root.rotation.y = Math.PI / 2; arden.sit = arden.sitTarget = 1; scene.add(arden.root);
     arden.holdHeadTarget = ctx.isDone('scenario') || state.scen.fixed ? 0 : 1;
     const co2Hi = 4800 + Math.floor(Math.random() * 1200); let co2 = state.scen.fixed ? 900 : co2Hi;
     const mon = makeScreen(0.7, 0.44, infoScreen('HABITAT', ['CO₂: —', 'Pressure: —'], { w: 384, hgt: 256 }), [384, 256]); mon.position.set(-9.95, 1.6, 3.0); mon.rotation.y = Math.PI / 2; scene.add(mon); worldUI(mon);

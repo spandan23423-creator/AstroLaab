@@ -69,7 +69,17 @@ export default {
     const road = new THREE.Mesh(new THREE.PlaneGeometry(8, 300), std(0x3a3d42, { roughness: 0.9 })); road.rotation.x = -Math.PI / 2; road.position.set(PAD.x, 0, 90); out.add(road);
     const rocket = makeDisplayRocket(2.2); rocket.position.copy(PAD); out.add(rocket);
     const tower = new THREE.Group(); for (let y = 0; y < 54; y += 3) { box(3, 0.2, 3, MAT.metal(0xc84a2a), 0, y, 0, tower); for (const [x, z] of [[-1.4, -1.4], [1.4, -1.4], [-1.4, 1.4], [1.4, 1.4]]) box(0.2, 3, 0.2, MAT.metal(0xc84a2a), x, y + 1.5, z, tower); } tower.position.set(PAD.x + 7, 0, PAD.z); out.add(tower);
-    const van = new THREE.Group(); box(2.4, 2.2, 5, std(0xf2f2f2, { roughness: 0.4 }), 0, 1.3, 0, van); box(2.42, 0.5, 4.9, std(0x2b4f8f), 0, 0.9, 0, van); van.position.set(PAD.x, 0, 160); out.add(van);
+    // crew van: an open cabin you sit inside (the old one was a solid box around the camera, so its faces were culled and
+    // you saw neither the van nor much else). Walls are double-sided, the windows are real gaps, and it drives with you.
+    const van = new THREE.Group(), vw = std(0xf2f2f2, { roughness: 0.4, side: THREE.DoubleSide }), vs = std(0x2b4f8f, { side: THREE.DoubleSide }), vd = std(0x2a2d33, { roughness: 0.8 });
+    box(2.4, 0.08, 5, vd, 0, 0.62, 0, van);                                                     // floor
+    box(2.4, 0.08, 5, vw, 0, 2.42, 0, van);                                                     // roof
+    for (const sx of [-1, 1]) { box(0.06, 0.62, 5, vw, sx * 1.2, 0.95, 0, van); box(0.06, 0.12, 5, vs, sx * 1.2, 1.32, 0, van); for (const z of [-2.45, -0.9, 0.9, 2.45]) box(0.06, 1.0, 0.12, vw, sx * 1.2, 1.88, z, van); } // lower sides, stripe, window pillars
+    box(2.4, 1.8, 0.06, vw, 0, 1.5, 2.5, van);                                                  // rear wall
+    box(2.4, 0.5, 0.5, vd, 0, 1.1, -2.3, van); for (const sx of [-1, 1]) box(0.12, 1.1, 0.08, vw, sx * 1.15, 1.85, -2.5, van); // dashboard, windscreen pillars
+    for (const [x, z] of [[-0.55, -1.2], [0.5, -1.2], [-0.55, 0.3], [0.5, 0.3]]) { box(0.55, 0.12, 0.55, std(0x3a3e46), x, 1.05, z, van); box(0.55, 0.6, 0.1, std(0x3a3e46), x, 1.4, z + 0.3, van); } // seats
+    for (const [x, z] of [[-1.1, -1.6], [1.1, -1.6], [-1.1, 1.7], [1.1, 1.7]]) { const w = cyl(0.38, 0.38, 0.28, vd, x, 0.38, z, van, 18); w.rotation.z = Math.PI / 2; }
+    van.position.set(PAD.x, 0, 160.2); out.add(van);
     // ---------- capsule cabin (moves with the launch) ----------
     const cab = new THREE.Group(); cab.visible = false; scene.add(cab);
     const shell = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.9, 2.4, 24, 1, true), std(0xd9dce2, { roughness: 0.7, side: THREE.BackSide })); shell.position.y = 1.2; cab.add(shell);
@@ -86,14 +96,14 @@ export default {
     async function toVan() {
       await ctx.fade(true, 500); state.stage = 'van'; out.visible = true; scene.background = new THREE.Color(0x9cc8f0); scene.fog = new THREE.Fog(0xbcd7ef, 80, 500);
       const sun = new THREE.DirectionalLight(0xfff2e0, 2.2); sun.position.set(PAD.x + 50, 80, 40); sun.target.position.copy(PAD); scene.add(sun, sun.target);
-      player.seat = { pos: new THREE.Vector3(PAD.x + 0.5, 1.9, 159), yaw: 0, yawRange: 1.4, pitchMin: -0.5, pitchMax: 0.6, roll: 0 }; player.yaw = 0; player.pitch = 0.1;
+      player.seat = { pos: new THREE.Vector3(PAD.x + 0.5, 1.82, 159), yaw: 0, yawRange: 2.0, pitchMin: -0.8, pitchMax: 0.9, roll: 0 }; player.yaw = 0; player.pitch = 0.1;
       await ctx.fade(false, 600); hud.cap('[The van hums down the road towards the pad]', 4000); vanT = 0;
     }
     let vanT = -1, t = 0, cd = null, poll = false, ascT = -1, evI = 0, evT = 0, orbitStarted = false;
     async function toCabin() {
       await ctx.fade(true, 600); state.stage = 'cabin'; van.visible = false; ctx.done('drive');
       cab.visible = true; cab.position.set(PAD.x, 44, PAD.z); rocket.visible = true;
-      player.seat = { pos: new THREE.Vector3(PAD.x, 44 + 1.15, PAD.z + 0.45), yaw: 0, yawRange: 1.1, pitchMin: -1.0, pitchMax: 1.0, roll: 0 }; player.yaw = 0; player.pitch = -0.2;
+      player.seat = { pos: new THREE.Vector3(PAD.x, 44 + 1.15, PAD.z + 0.45), yaw: 0, yawRange: 2.0, pitchMin: -1.1, pitchMax: 1.1, roll: 0 }; player.yaw = 0; player.pitch = -0.2;
       await ctx.fade(false, 700);
       hud.flash('You ride the elevator up the tower and climb into the capsule. Fasten the five harness buckles.', '', 5000); drawScr();
     }
@@ -219,7 +229,7 @@ export default {
       onEnter: () => { if (!ctx.isDone('brief')) hud.flash('Talk to Instructor Okafor.', '', 3500); },
       update(dt, blocked) {
         okafor.update(dt); hart.update(dt); t += dt;
-        if (state.stage === 'van' && vanT >= 0 && !blocked) { vanT += dt; const z = 159 - vanT * 12; player.seat.pos.z = z; if (vanT > 9) { vanT = -1; toCabin(); } }
+        if (state.stage === 'van' && vanT >= 0 && !blocked) { vanT += dt; const z = 159 - vanT * 12; player.seat.pos.z = z; van.position.z = z + 1.2; /* the van drives with you (you sit in the front passenger seat) */ if (vanT > 9) { vanT = -1; toCabin(); } }
         if (state.stage === 'cabin' && cd != null && !blocked) {
           if (cd > 30 && cd - dt <= 30 && !poll) goPoll();
           if (!(poll && !ctx.isDone('countdown'))) cd -= dt;

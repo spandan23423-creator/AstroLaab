@@ -11,7 +11,7 @@ function buildHand(side, skinCol = SKIN, cuffCol = CUFF) {
   const cuff = new THREE.MeshStandardMaterial({ color: cuffCol, roughness: 0.8 });
   const add = (geo, mat, x, y, z, parent = g) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); parent.add(m); return m; };
   // forearm sleeve + wrist cuff
-  const sleeve = add(new THREE.CylinderGeometry(0.042, 0.05, 0.26, 14), cuff, 0, 0, 0.16); sleeve.rotation.x = Math.PI / 2;
+  const sleeve = add(new THREE.CylinderGeometry(0.039, 0.045, 0.18, 14), cuff, 0, 0, 0.12); // shorter, slimmer sleeve: it used to fill the corner of the screen sleeve.rotation.x = Math.PI / 2;
   add(new THREE.TorusGeometry(0.041, 0.008, 6, 16), cuff, 0, 0, 0.03);
   // palm (rounded block)
   const palm = add(new THREE.CapsuleGeometry(0.036, 0.04, 4, 10), skin, 0, -0.002, -0.035); palm.rotation.x = Math.PI / 2; palm.scale.set(1.25, 1, 0.62);
@@ -74,7 +74,7 @@ export class Hands {
     if (want === 'hold' && holdAt) { // hands follow the held item: one hand under a small item, two hands on the sides of a big one
       const [hx, hy, hz] = holdAt;
       if (big) { const w = Math.min(0.42, half + 0.015); tR = [hx + w, hy - 0.03, hz + 0.1, 0.1, 0.35, -1.35, 0.55]; tL = [hx - w, hy - 0.03, hz + 0.1, 0.1, -0.35, 1.35, 0.55]; }
-      else tR = [hx + 0.02, hy - Math.min(0.12, half * 0.6 + 0.05), hz + 0.06, 0.25, 0.2, -0.35, 0.7];
+      else tR = [hx + Math.min(0.12, half + 0.035), hy - 0.015, hz + 0.05, 0.05, 0.3, -1.25, 0.8]; // wrap the hand round the side of a small item, palm facing it (it used to sit flat under it)
     }
     for (const [hnd, cur, tgt] of [[this.R, this.cur.R, tR], [this.L, this.cur.L, tL]]) {
       for (let i = 0; i < 7; i++) cur[i] += (tgt[i] - cur[i]) * k;
